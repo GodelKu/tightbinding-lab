@@ -1,0 +1,149 @@
+{
+  "tblab_version": "0.1.0",
+  "checks": [
+    {
+      "check": "chain: max |E(k) + 2t cos k|",
+      "analytic": 0.0,
+      "numeric": 0.0,
+      "error": 0.0,
+      "error_kind": "abs",
+      "tolerance": 1e-12,
+      "passed": true
+    },
+    {
+      "check": "square: bandwidth 8t",
+      "analytic": 5.6,
+      "numeric": 5.6,
+      "error": 0.0,
+      "error_kind": "abs",
+      "tolerance": 1e-12,
+      "passed": true
+    },
+    {
+      "check": "graphene: Dirac velocity vs 3ta/2",
+      "analytic": 5.751,
+      "numeric": 5.750999985501307,
+      "error": 2.521073363401697e-09,
+      "error_kind": "rel",
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "check": "graphene: gap at K",
+      "analytic": 0.0,
+      "numeric": 2.1616016629428298e-15,
+      "error": 2.1616016629428298e-15,
+      "error_kind": "abs",
+      "tolerance": 1e-12,
+      "passed": true
+    },
+    {
+      "check": "graphene: DOS(0.1t) vs 2\u221a3|E|/(3\u03c0t\u00b2)",
+      "analytic": 0.03675525969478615,
+      "numeric": 0.03711973891291628,
+      "error": 0.009916382611815105,
+      "error_kind": "rel",
+      "tolerance": 0.03,
+      "passed": true
+    },
+    {
+      "check": "square: DOS(2t) vs K(m)/(2\u03c0\u00b2t)",
+      "analytic": 0.10925035897394314,
+      "numeric": 0.10925738352052944,
+      "error": 6.429769798718702e-05,
+      "error_kind": "rel",
+      "tolerance": 0.02,
+      "passed": true
+    },
+    {
+      "check": "SSH (v=.5,w=1, N=40): max |E_edge|",
+      "analytic": 0.0,
+      "numeric": 6.821883429496902e-13,
+      "error": 6.821883429496902e-13,
+      "error_kind": "abs",
+      "tolerance": 1e-09,
+      "passed": true
+    },
+    {
+      "check": "SSH: edge decay ratio |v/w|",
+      "analytic": 0.5,
+      "numeric": 0.5000000000000111,
+      "error": 2.220446049250313e-14,
+      "error_kind": "rel",
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "check": "SSH topological: |Zak phase|",
+      "analytic": 3.141592653589793,
+      "numeric": 3.1415926535897927,
+      "error": 4.440892098500626e-16,
+      "error_kind": "abs",
+      "tolerance": 1e-09,
+      "passed": true
+    },
+    {
+      "check": "SSH trivial: |Zak phase|",
+      "analytic": 0.0,
+      "numeric": 3.348016308635236e-16,
+      "error": 3.348016308635236e-16,
+      "error_kind": "abs",
+      "tolerance": 1e-09,
+      "passed": true
+    },
+    {
+      "check": "Haldane topological (M=0): |C|",
+      "analytic": 1.0,
+      "numeric": 1.0,
+      "error": 0.0,
+      "error_kind": "abs",
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "check": "Haldane trivial (M=0.8, > 3\u221a3 t2): C",
+      "analytic": 0.0,
+      "numeric": -7.067899292141149e-17,
+      "error": 7.067899292141149e-17,
+      "error_kind": "abs",
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    {
+      "check": "Haldane: gap at K,K' (M=0) = 2\u00b73\u221a3 t2 sin\u03c6",
+      "analytic": 1.0392304845413265,
+      "numeric": 1.0392304845413267,
+      "error": 2.220446049250313e-16,
+      "error_kind": "abs",
+      "tolerance": 1e-12,
+      "passed": true
+    },
+    {
+      "check": "Haldane: gap K' equals gap K at M=0",
+      "analytic": 1.0392304845413267,
+      "numeric": 1.0392304845413263,
+      "error": 4.440892098500626e-16,
+      "error_kind": "abs",
+      "tolerance": 1e-12,
+      "passed": true
+    },
+    {
+      "check": "Kronig-Penney: max |E_analytic - E_planewave| (3 bands)",
+      "analytic": 0.0,
+      "numeric": 1.8908951346929825e-06,
+      "error": 1.8908951346929825e-06,
+      "error_kind": "abs",
+      "tolerance": 0.0001,
+      "passed": true
+    },
+    {
+      "check": "graphene BZ area = (2\u03c0)\u00b2/A_cell",
+      "analytic": 15.19525002070415,
+      "numeric": 15.195250020704155,
+      "error": 3.507063398719781e-16,
+      "error_kind": "rel",
+      "tolerance": 1e-10,
+      "passed": true
+    }
+  ]
+}
