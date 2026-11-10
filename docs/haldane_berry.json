@@ -1,0 +1,29 @@
+{
+  "tblab_version": "0.1.0",
+  "command": "berry",
+  "model": "haldane",
+  "parameters": {
+    "t1": 1.0,
+    "t2": 0.1,
+    "phi": 1.5707963267948966,
+    "mass": 0.0,
+    "a": 1.0
+  },
+  "results": {
+    "chern_number_rounded": -1,
+    "chern_number_raw_sum": -1.0,
+    "min_direct_gap_on_grid": 1.041337361794276,
+    "nk": 100,
+    "sign_convention": "A = i<u|grad u>, Omega = dAy/dx - dAx/dy, C = (1/2pi) integral Omega",
+    "critical_mass_3sqrt3_t2_sin_phi": 0.5196152422706632,
+    "analytic_prediction": -1,
+    "analytic_valley_gaps": [
+      1.0392304845413265,
+      1.0392304845413265
+    ]
+  },
+  "files": [
+    "docs/haldane_berry.png",
+    "docs/haldane_berry.json"
+  ]
+}

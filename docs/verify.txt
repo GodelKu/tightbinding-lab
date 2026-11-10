@@ -1,0 +1,20 @@
+check                                                        analytic       numeric       error       tol  ok
+-------------------------------------------------------------------------------------------------------------
+chain: max |E(k) + 2t cos k|                                        0             0    0.00e+00     1e-12  PASS (abs)
+square: bandwidth 8t                                              5.6           5.6    0.00e+00     1e-12  PASS (abs)
+graphene: Dirac velocity vs 3ta/2                               5.751         5.751    2.52e-09     1e-06  PASS (rel)
+graphene: gap at K                                                  0    2.1616e-15    2.16e-15     1e-12  PASS (abs)
+graphene: DOS(0.1t) vs 2√3|E|/(3πt²)                        0.0367553     0.0371197    9.92e-03     3e-02  PASS (rel)
+square: DOS(2t) vs K(m)/(2π²t)                                0.10925      0.109257    6.43e-05     2e-02  PASS (rel)
+SSH (v=.5,w=1, N=40): max |E_edge|                                  0   6.82188e-13    6.82e-13     1e-09  PASS (abs)
+SSH: edge decay ratio |v/w|                                       0.5           0.5    2.22e-14     1e-06  PASS (rel)
+SSH topological: |Zak phase|                                  3.14159       3.14159    4.44e-16     1e-09  PASS (abs)
+SSH trivial: |Zak phase|                                            0   3.34802e-16    3.35e-16     1e-09  PASS (abs)
+Haldane topological (M=0): |C|                                      1             1    0.00e+00     1e-06  PASS (abs)
+Haldane trivial (M=0.8, > 3√3 t2): C                                0   -7.0679e-17    7.07e-17     1e-06  PASS (abs)
+Haldane: gap at K,K' (M=0) = 2·3√3 t2 sinφ                    1.03923       1.03923    2.22e-16     1e-12  PASS (abs)
+Haldane: gap K' equals gap K at M=0                           1.03923       1.03923    4.44e-16     1e-12  PASS (abs)
+Kronig-Penney: max |E_analytic - E_planewave| (3 bands)             0    1.8909e-06    1.89e-06     1e-04  PASS (abs)
+graphene BZ area = (2π)²/A_cell                               15.1953       15.1953    3.51e-16     1e-10  PASS (rel)
+16/16 checks passed
+wrote docs/verify.json

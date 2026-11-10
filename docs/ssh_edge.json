@@ -1,0 +1,29 @@
+{
+  "tblab_version": "0.1.0",
+  "command": "ssh",
+  "model": "ssh",
+  "parameters": {
+    "v": 0.5,
+    "w": 1.0,
+    "n_cells": 40
+  },
+  "results": {
+    "n_cells": 40,
+    "zero_mode_energies": [
+      -6.820537097106511e-13,
+      6.821883429496902e-13
+    ],
+    "smallest_nonzero_bulk_like_|E|": 0.5032311821398178,
+    "bulk_gap_half_|v-w|": 0.5,
+    "zak_phase_numeric_abs": 3.1415926535897927,
+    "zak_phase_expected": 3.141592653589793,
+    "winding_number": 1,
+    "decay_ratio_fitted": 0.5000000000000111,
+    "decay_ratio_analytic_|v/w|": 0.5,
+    "topological": true
+  },
+  "files": [
+    "docs/ssh_edge.png",
+    "docs/ssh_edge.json"
+  ]
+}
