@@ -45,13 +45,6 @@
       "abs_energy_of_peak": 1.0
     }
   },
-  "ssh": {
-    "v": 0.5,
-    "w": 1.0,
-    "n_cells": 40,
-    "edge_splitting_analytic": 6.821210263296962e-13,
-    "scale_w_(v/w)^N": 9.094947017729282e-13
-  },
   "haldane": {
     "t2": 0.1,
     "phi": "pi/2",

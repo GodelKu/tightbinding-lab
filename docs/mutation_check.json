@@ -222,7 +222,7 @@
       "name": "SSH edge splitting without the factor 1 - (v/w)^2",
       "file": "src/tblab/analytic.py",
       "caught": true,
-      "first_failing_test": "tests/test_cli.py::test_verify_command_exit_code_and_json"
+      "first_failing_test": "tests/test_cli.py::test_ssh_command"
     }
   ]
 }

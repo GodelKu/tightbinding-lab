@@ -31,7 +31,8 @@ def test_open_chain_is_chiral_symmetric():
 def test_topological_phase_has_two_zero_modes(v, w, n):
     modes = ssh_edge_modes(n, v, w)
     bound = 10 * (v / w) ** n * w  # exponentially small hybridisation ~ w (v/w)^N
-    assert np.abs(modes.zero_energies).max() < max(bound, 1e-10)
+    assert modes.topological
+    assert np.abs(modes.lowest_energies).max() < max(bound, 1e-10)
     # the next eigenvalue is bulk-like, separated by ~ the bulk gap |v-w|
     third = np.sort(np.abs(modes.energies))[2]
     assert third > 0.9 * abs(w - v)
@@ -41,6 +42,14 @@ def test_trivial_phase_has_no_in_gap_states():
     v, w = 1.0, 0.5
     modes = ssh_edge_modes(40, v, w)
     assert np.abs(modes.energies).min() > 0.95 * abs(v - w)
+    # the two lowest-|E| states are bulk states here: no edge-mode label, no decay ratio
+    assert not modes.topological
+    assert np.isnan(modes.decay_ratio)
+
+
+def test_w_zero_is_rejected():
+    with pytest.raises(ValueError, match="w must be nonzero"):
+        ssh_edge_modes(10, 0.5, 0.0)
 
 
 def test_zero_mode_is_analytic_geometric_series():

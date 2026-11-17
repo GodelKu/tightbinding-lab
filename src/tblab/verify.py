@@ -108,7 +108,7 @@ def run_checks() -> list[Check]:
         _row(
             "SSH (v=.5,w=1, N=40): |E_edge| vs w(v/w)^N(1-(v/w)²)",
             an.ssh_edge_splitting(0.5, 1.0, 40),
-            float(np.abs(em.zero_energies).mean()),
+            float(np.abs(em.lowest_energies).mean()),
             1e-3,
             "rel",
         )

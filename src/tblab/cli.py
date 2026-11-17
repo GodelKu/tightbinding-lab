@@ -69,6 +69,38 @@ def parse_angle(text: str) -> float:
         raise argparse.ArgumentTypeError(f"cannot parse angle {text!r}") from None
 
 
+def _int_at_least(lower: int) -> Callable[[str], int]:
+    def parse(text: str) -> int:
+        try:
+            value = int(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"expected an integer, got {text!r}") from None
+        if value < lower:
+            raise argparse.ArgumentTypeError(f"must be at least {lower}, got {value}")
+        return value
+
+    return parse
+
+
+def _float_where(test: Callable[[float], bool], what: str) -> Callable[[str], float]:
+    def parse(text: str) -> float:
+        try:
+            value = float(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"expected a number, got {text!r}") from None
+        if not math.isfinite(value) or not test(value):
+            raise argparse.ArgumentTypeError(f"must be {what}, got {text}")
+        return value
+
+    return parse
+
+
+_positive = _float_where(lambda x: x > 0, "positive")
+_non_negative = _float_where(lambda x: x >= 0, "zero or positive")
+_nonzero = _float_where(lambda x: x != 0, "nonzero")
+_finite = _float_where(lambda x: True, "a finite number")
+
+
 def _jsonable(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {str(k): _jsonable(v) for k, v in obj.items()}
@@ -105,23 +137,29 @@ def _model_from_args(args: argparse.Namespace) -> Any:
 
 
 def _add_model_args(p: argparse.ArgumentParser) -> None:
-    g = p.add_argument_group("model parameters (unused ones are ignored by the chosen model)")
-    g.add_argument("--t", type=float, help="nearest-neighbour hopping (default 1)")
-    g.add_argument("--t1", type=float, help="Haldane NN hopping (default 1)")
-    g.add_argument(
-        "--t2", type=float, help="next-nearest hopping (chain/square default 0, haldane 0.1)"
+    g = p.add_argument_group(
+        "model parameters (giving one that the chosen model does not have is an error)"
     )
-    g.add_argument("--a", type=float, help="lattice constant (graphene/haldane: C-C bond length)")
-    g.add_argument("--eps", type=float, help="on-site energy (chain, square)")
-    g.add_argument("--v", type=float, help="SSH intracell hopping")
-    g.add_argument("--w", type=float, help="SSH intercell hopping")
-    g.add_argument("--mass", type=float, help="staggered sublattice potential (graphene, haldane)")
+    g.add_argument("--t", type=_finite, help="nearest-neighbour hopping (default 1)")
+    g.add_argument("--t1", type=_finite, help="Haldane NN hopping (default 1)")
+    g.add_argument(
+        "--t2", type=_finite, help="next-nearest hopping (chain/square default 0, haldane 0.1)"
+    )
+    g.add_argument(
+        "--a", type=_positive, help="lattice constant (graphene/haldane: C-C bond length)"
+    )
+    g.add_argument("--eps", type=_finite, help="on-site energy (chain, square)")
+    g.add_argument("--v", type=_finite, help="SSH intracell hopping")
+    g.add_argument("--w", type=_finite, help="SSH intercell hopping")
+    g.add_argument(
+        "--mass", type=_finite, help="staggered sublattice potential (graphene, haldane)"
+    )
     g.add_argument("--phi", type=parse_angle, help="Haldane flux phase, e.g. 'pi/2' (default pi/2)")
 
 
 def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--out", type=Path, default=Path("tblab_output"), help="output directory")
-    p.add_argument("--dpi", type=int, default=160)
+    p.add_argument("--dpi", type=_int_at_least(1), default=160)
     p.add_argument("--no-plot", action="store_true", help="write JSON only")
     p.add_argument("--unit", default="t", help="energy unit label (default 't')")
 
@@ -205,6 +243,8 @@ def cmd_dos(args: argparse.Namespace) -> int:
     pad = 0.1 * float(sample.max() - sample.min() + 1e-9)
     lo = float(sample.min()) - pad if args.emin is None else float(args.emin)
     hi = float(sample.max()) + pad if args.emax is None else float(args.emax)
+    if not hi > lo:
+        raise ValueError(f"empty energy window: emin = {lo:g} must be below emax = {hi:g}")
     grid = np.linspace(lo, hi, args.ne)
     curves: dict[str, Any] = {}
     if args.method in ("tetra", "both"):
@@ -245,17 +285,23 @@ def cmd_ssh(args: argparse.Namespace) -> int:
     wz = np.linspace(0.02, 2.5 * v, 201)
     zak = np.array([zak_phase(make_model("ssh", v=v, w=float(x)), nk=400) for x in wz])
     zak_here = zak_phase(make_model("ssh", v=v, w=w), nk=400)
+    abs_e = np.sort(np.abs(modes.energies))
+    topo = modes.topological
     results = {
         "n_cells": n,
-        "zero_mode_energies": modes.zero_energies,
-        "smallest_nonzero_bulk_like_|E|": float(np.sort(np.abs(modes.energies))[2]),
+        "topological": topo,
+        # in the topological phase these are the two edge modes, otherwise bulk states
+        "two_smallest_|E|_energies": modes.lowest_energies,
+        "edge_mode_splitting_analytic_w(v/w)^N(1-(v/w)^2)": (
+            an.ssh_edge_splitting(v, w, n) if topo else None
+        ),
+        "smallest_bulk_|E|": float(abs_e[2] if topo else abs_e[0]),
         "bulk_gap_half_|v-w|": abs(abs(v) - abs(w)),
         "zak_phase_numeric_abs": abs(zak_here),
         "zak_phase_expected": an.ssh_zak_phase_expected(v, w),
         "winding_number": ssh_winding_number(v, w),
-        "decay_ratio_fitted": modes.decay_ratio,
-        "decay_ratio_analytic_|v/w|": abs(v / w),
-        "topological": bool(abs(w) > abs(v)),
+        "edge_decay_ratio_fitted": modes.decay_ratio if topo else None,
+        "edge_decay_ratio_analytic_|v/w|": abs(v / w) if topo else None,
     }
     fig = None if args.no_plot else fig_ssh(ws, spec, v, w, modes, wz, np.abs(zak), n)
     data = {
@@ -318,7 +364,7 @@ def cmd_berry(args: argparse.Namespace) -> int:
 
 
 def cmd_phase(args: argparse.Namespace) -> int:
-    t2 = args.t2
+    t2 = args.t2  # nonzero: the mass axis is M / t2
     phis = np.linspace(-math.pi, math.pi, args.n)
     ms = np.linspace(-6.0, 6.0, args.n)  # M / t2
     chern = np.zeros((args.n, args.n))
@@ -433,7 +479,12 @@ def build_parser() -> argparse.ArgumentParser:
     b = sub.add_parser("bands", help="band structure along a high-symmetry path")
     b.add_argument("model", choices=sorted(MODELS))
     b.add_argument("--path", help="e.g. G-K-M-G (default depends on the model)")
-    b.add_argument("--nk", type=int, default=300, help="approximate number of k-points on the path")
+    b.add_argument(
+        "--nk",
+        type=_int_at_least(2),
+        default=300,
+        help="approximate number of k-points on the path",
+    )
     _add_model_args(b)
     _add_common(b)
     b.set_defaults(func=cmd_bands)
@@ -441,43 +492,45 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("dos", help="density of states (tetrahedron and/or Gaussian)")
     d.add_argument("model", choices=sorted(MODELS))
     d.add_argument("--method", choices=["tetra", "gauss", "both"], default="both")
-    d.add_argument("--nk", type=int, default=160, help="k-points per reciprocal direction")
-    d.add_argument("--ne", type=int, default=801, help="number of energy points")
-    d.add_argument("--sigma", type=float, default=0.05, help="Gaussian width")
-    d.add_argument("--emin", type=float)
-    d.add_argument("--emax", type=float)
+    d.add_argument(
+        "--nk", type=_int_at_least(2), default=160, help="k-points per reciprocal direction"
+    )
+    d.add_argument("--ne", type=_int_at_least(2), default=801, help="number of energy points")
+    d.add_argument("--sigma", type=_positive, default=0.05, help="Gaussian width")
+    d.add_argument("--emin", type=_finite)
+    d.add_argument("--emax", type=_finite)
     _add_model_args(d)
     _add_common(d)
     d.set_defaults(func=cmd_dos)
 
     s = sub.add_parser("ssh", help="open SSH chain: edge states, Zak phase")
-    s.add_argument("--v", type=float, default=0.5)
-    s.add_argument("--w", type=float, default=1.0)
-    s.add_argument("--cells", type=int, default=40)
+    s.add_argument("--v", type=_nonzero, default=0.5, help="intracell hopping (nonzero)")
+    s.add_argument("--w", type=_nonzero, default=1.0, help="intercell hopping (nonzero)")
+    s.add_argument("--cells", type=_int_at_least(2), default=40)
     _add_common(s)
     s.set_defaults(func=cmd_ssh)
 
     y = sub.add_parser("berry", help="Berry curvature and Chern number (haldane / graphene)")
     y.add_argument("model", choices=["haldane", "graphene"], nargs="?", default="haldane")
-    y.add_argument("--nk", type=int, default=100)
+    y.add_argument("--nk", type=_int_at_least(3), default=100)
     _add_model_args(y)
     _add_common(y)
     y.set_defaults(func=cmd_berry)
 
     ph = sub.add_parser("phase", help="Haldane phase diagram in the (phi, M/t2) plane")
-    ph.add_argument("--t2", type=float, default=0.1)
-    ph.add_argument("--n", type=int, default=61, help="grid points per axis")
-    ph.add_argument("--nk", type=int, default=24, help="k-grid for each Chern number")
+    ph.add_argument("--t2", type=_nonzero, default=0.1, help="NNN hopping (nonzero: unit of M)")
+    ph.add_argument("--n", type=_int_at_least(2), default=61, help="grid points per axis")
+    ph.add_argument("--nk", type=_int_at_least(3), default=24, help="k-grid for each Chern number")
     _add_common(ph)
     ph.set_defaults(func=cmd_phase)
 
     k = sub.add_parser("kp", help="Kronig-Penney bands: analytic condition vs plane-wave solver")
-    k.add_argument("--v0", type=float, default=20.0)
-    k.add_argument("--well", type=float, default=1.0)
-    k.add_argument("--barrier", type=float, default=0.3)
-    k.add_argument("--bands", type=int, default=4)
-    k.add_argument("--nk", type=int, default=61)
-    k.add_argument("--npw", type=int, default=100, help="plane waves = 2*npw+1")
+    k.add_argument("--v0", type=_non_negative, default=20.0, help="barrier height (>= 0)")
+    k.add_argument("--well", type=_positive, default=1.0)
+    k.add_argument("--barrier", type=_non_negative, default=0.3)
+    k.add_argument("--bands", type=_int_at_least(1), default=4)
+    k.add_argument("--nk", type=_int_at_least(2), default=61)
+    k.add_argument("--npw", type=_int_at_least(1), default=100, help="plane waves = 2*npw+1")
     _add_common(k)
     k.set_defaults(func=cmd_kp)
 

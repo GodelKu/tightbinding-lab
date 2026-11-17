@@ -108,9 +108,57 @@ def test_ssh_command(tmp_path):
     assert _png_ok(tmp_path / "ssh_edge.png")
     r = json.loads((tmp_path / "ssh_edge.json").read_text())["results"]
     assert r["topological"] is True
-    assert max(abs(e) for e in r["zero_mode_energies"]) < 1e-8
+    assert max(abs(e) for e in r["two_smallest_|E|_energies"]) < 1e-8
     assert r["zak_phase_numeric_abs"] == pytest.approx(math.pi, abs=1e-9)
-    assert r["decay_ratio_fitted"] == pytest.approx(0.5, rel=1e-6)
+    assert r["edge_decay_ratio_fitted"] == pytest.approx(0.5, rel=1e-6)
+    split = r["edge_mode_splitting_analytic_w(v/w)^N(1-(v/w)^2)"]
+    assert np.mean(np.abs(r["two_smallest_|E|_energies"])) == pytest.approx(split, rel=1e-3)
+
+
+def test_ssh_command_trivial_phase_has_no_edge_mode_labels(tmp_path):
+    assert main(["ssh", "--v", "1.0", "--w", "0.5", "--no-plot", "--out", str(tmp_path)]) == 0
+    r = json.loads((tmp_path / "ssh_edge.json").read_text())["results"]
+    assert r["topological"] is False
+    assert r["edge_decay_ratio_fitted"] is None
+    assert r["edge_mode_splitting_analytic_w(v/w)^N(1-(v/w)^2)"] is None
+    assert min(abs(e) for e in r["two_smallest_|E|_energies"]) > 0.45  # bulk gap edge |v-w|
+    assert r["smallest_bulk_|E|"] == pytest.approx(
+        min(abs(e) for e in r["two_smallest_|E|_energies"])
+    )
+
+
+@pytest.mark.parametrize(
+    "argv,message",
+    [
+        (["ssh", "--w", "0"], "must be nonzero"),
+        (["ssh", "--cells", "1"], "must be at least 2"),
+        (["dos", "square", "--nk", "0"], "must be at least 2"),
+        (["dos", "square", "--sigma", "-0.1"], "must be positive"),
+        (["berry", "haldane", "--nk", "1"], "must be at least 3"),
+        (["phase", "--t2", "0"], "must be nonzero"),
+        (["kp", "--well", "0"], "must be positive"),
+        (["bands", "chain", "--a", "-1"], "must be positive"),
+        (["bands", "chain", "--nk", "abc"], "expected an integer"),
+    ],
+)
+def test_invalid_arguments_are_rejected_with_a_message(argv, message, tmp_path, capsys):
+    with pytest.raises(SystemExit) as info:
+        main([*argv, "--out", str(tmp_path)])
+    assert info.value.code == 2
+    assert message in capsys.readouterr().err
+
+
+def test_parameter_the_model_does_not_have_is_an_error(tmp_path, capsys):
+    rc = main(["bands", "graphene", "--t2", "0.3", "--out", str(tmp_path)])
+    assert rc == 2
+    assert "has no parameter(s) t2" in capsys.readouterr().err
+    assert not (tmp_path / "graphene_bands.json").exists()
+
+
+def test_empty_energy_window_is_an_error(tmp_path, capsys):
+    rc = main(["dos", "chain", "--emin", "1", "--emax", "0", "--out", str(tmp_path)])
+    assert rc == 2
+    assert "empty energy window" in capsys.readouterr().err
 
 
 def test_berry_command_reports_chern_number(tmp_path):

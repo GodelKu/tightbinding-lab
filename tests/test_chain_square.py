@@ -80,8 +80,12 @@ def test_one_band_models_have_no_closed_form_reference():
         assert res.analytic is None and res.max_abs_error is None
 
 
-def test_make_model_ignores_unknown_and_none():
-    m = make_model("chain", t=2.0, v=5.0, w=None, mass=None)
+def test_make_model_skips_none_and_rejects_unknown_parameters():
+    m = make_model("chain", t=2.0, w=None, mass=None)
     assert isinstance(m, Chain) and m.t == 2.0
+    with pytest.raises(ValueError, match="has no parameter"):
+        make_model("chain", t=2.0, v=5.0)
+    with pytest.raises(ValueError, match="positive"):
+        make_model("square", a=0.0)
     with pytest.raises(ValueError):
         make_model("nonexistent")

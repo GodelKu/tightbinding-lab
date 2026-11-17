@@ -88,16 +88,6 @@ def dos() -> dict[str, Any]:
     return out
 
 
-def ssh() -> dict[str, Any]:
-    return {
-        "v": 0.5,
-        "w": 1.0,
-        "n_cells": 40,
-        "edge_splitting_analytic": an.ssh_edge_splitting(0.5, 1.0, 40),
-        "scale_w_(v/w)^N": 0.5**40,
-    }
-
-
 def haldane() -> dict[str, Any]:
     h = Haldane(t2=0.1, phi=math.pi / 2, mass=0.0)
     out: dict[str, Any] = {"t2": 0.1, "phi": "pi/2", "mass": 0.0}
@@ -180,7 +170,7 @@ def kronig_penney() -> dict[str, Any]:
 
 
 def main() -> int:
-    data = {"dos": dos(), "ssh": ssh(), "haldane": haldane(), "kronig_penney": kronig_penney()}
+    data = {"dos": dos(), "haldane": haldane(), "kronig_penney": kronig_penney()}
     OUT.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)}")
     return 0

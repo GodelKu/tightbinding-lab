@@ -34,7 +34,7 @@ SOURCES = [
 
 def load(docs: Path = DOCS) -> dict[str, Any]:
     data: dict[str, Any] = {
-        name: json.loads((docs / f"{name}.json").read_text()) for name in SOURCES
+        name: json.loads((docs / f"{name}.json").read_text(encoding="utf-8")) for name in SOURCES
     }
     data["verify_txt"] = (docs / "verify.txt").read_text(encoding="utf-8")
     return data
@@ -135,20 +135,20 @@ def dos_table(d: dict[str, Any]) -> str:
 
 def ssh(d: dict[str, Any]) -> str:
     r = d["ssh_edge"]["results"]
-    m = d["measurements"]["ssh"]
-    zero = sorted(r["zero_mode_energies"])
+    p = d["ssh_edge"]["parameters"]
+    zero = sorted(r["two_smallest_|E|_energies"])
+    split = r["edge_mode_splitting_analytic_w(v/w)^N(1-(v/w)^2)"]
     triv = check(d, "SSH trivial")
     return "\n".join(
         [
-            f"- Open chain of {m['n_cells']} cells, `v = {m['v']}, w = {m['w']}`: the two states "
+            f"- Open chain of {r['n_cells']} cells, `v = {p['v']}, w = {p['w']}`: the two states "
             f"closest to zero have `E = {zero[0]:.4e}` and `{zero[1]:.4e}`. To leading order the "
-            "two edge states couple with `w (v/w)^N (1 - (v/w)²)` = "
-            f"`{m['edge_splitting_analytic']:.4e}` (the left state lives on A sites as `(-v/w)^n`, "
-            "the right one on B sites; `H` applied to the right state leaves only "
-            "`v (v/w)^(N-1)` on the first A site). The next level is at "
-            f"`{r['smallest_nonzero_bulk_like_|E|']:.4f}` against the bulk half-gap "
+            f"two edge states couple with `w (v/w)^N (1 - (v/w)²)` = `{split:.4e}` (the left "
+            "state lives on A sites as `(-v/w)^n`, the right one on B sites; `H` applied to the "
+            "right state leaves only `v (v/w)^(N-1)` on the first A site). The next level is at "
+            f"`{r['smallest_bulk_|E|']:.4f}` against the bulk half-gap "
             f"`|v-w| = {r['bulk_gap_half_|v-w|']}`.",
-            f"- The fitted decay of the edge density gives `|v/w| = {r['decay_ratio_fitted']!r}`.",
+            f"- The fitted decay of the edge density gives `|v/w| = {r['edge_decay_ratio_fitted']!r}`.",
             f"- Zak phase of the lower band from a discretised Wilson loop: "
             f"`|γ| = {r['zak_phase_numeric_abs']!r}` for `w > v`, `{e(triv['numeric'])}` for "
             f"`w < v`.",

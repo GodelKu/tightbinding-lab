@@ -31,21 +31,32 @@ def ssh_open_hamiltonian(n_cells: int, v: float, w: float) -> FloatArray:
 
 @dataclass(frozen=True)
 class EdgeModes:
+    """The two states of an open SSH chain closest to ``E = 0``.
+
+    They are the two edge modes only in the topological phase ``|w| > |v|`` (``topological``);
+    in the trivial phase they are ordinary bulk states at the gap edge.
+    """
+
     energies: FloatArray  # all eigenvalues (ascending)
-    zero_energies: FloatArray  # the two eigenvalues with smallest |E|
-    density: FloatArray  # |ψ₀|² + |ψ₁|² on every site (projector onto the two modes)
+    lowest_energies: FloatArray  # the two eigenvalues with smallest |E|
+    density: FloatArray  # |ψ₀|² + |ψ₁|² on every site (projector onto the two states)
     weight_a: FloatArray  # density on A sites, per cell
     weight_b: FloatArray  # density on B sites, per cell
-    decay_ratio: float  # fitted ψ_A(n+1)/ψ_A(n) magnitude on the left edge
+    decay_ratio: float  # fitted |ψ_A(n+1)/ψ_A(n)| on the left edge; nan in the trivial phase
+    topological: bool  # |w| > |v|: the two states are edge modes
 
 
 def ssh_edge_modes(n_cells: int, v: float, w: float, fit_cells: int = 12) -> EdgeModes:
     """Diagonalise an open SSH chain and analyse the two states closest to E = 0.
 
     ``decay_ratio`` is the geometric decay of the (A-sublattice) density's square root over the
-    first ``fit_cells`` cells; analytic value ``|v/w|`` (meaningful only when ``|w| > |v|``).
+    first ``fit_cells`` cells, analytic value ``|v/w|``. It is only defined in the topological
+    phase ``|w| > |v|``; in the trivial phase it is ``nan``.
     """
+    if w == 0:
+        raise ValueError("w must be nonzero (w = 0 is a set of isolated dimers)")
     h = ssh_open_hamiltonian(n_cells, v, w)
+    topological = abs(w) > abs(v)
     e, vec = np.linalg.eigh(h)
     idx = np.argsort(np.abs(e))[:2]
     dens = (np.abs(vec[:, idx]) ** 2).sum(axis=1)
@@ -53,18 +64,19 @@ def ssh_edge_modes(n_cells: int, v: float, w: float, fit_cells: int = 12) -> Edg
     m = min(fit_cells, n_cells)
     # skip cells where the density has underflowed to numerical noise
     ok = wa[:m] > 1e-28
-    if ok.sum() >= 3:
+    if topological and ok.sum() >= 3:
         slope = np.polyfit(np.arange(m)[ok], np.log(wa[:m][ok]), 1)[0]
         ratio = float(np.exp(0.5 * slope))
     else:
         ratio = float("nan")
     return EdgeModes(
         energies=e,
-        zero_energies=e[idx],
+        lowest_energies=e[idx],
         density=dens,
         weight_a=wa,
         weight_b=wb,
         decay_ratio=ratio,
+        topological=topological,
     )
 
 

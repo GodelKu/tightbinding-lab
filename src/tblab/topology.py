@@ -219,7 +219,7 @@ def berry_curvature_kubo(
     tau = None if orbital_positions is None else np.asarray(orbital_positions, dtype=float)
 
     def ham(k: FloatArray) -> ComplexArray:
-        h = model.hamiltonian(k)
+        h: np.ndarray = model.hamiltonian(k)
         if tau is not None:
             u = np.exp(-1j * (k @ tau.T))  # (..., norb)
             h = u[..., :, None] * h * np.conj(u)[..., None, :]

@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "tblab"
-version = "0.1.0"
+version = "0.2.0"
 description = "Tight-binding lab: from-scratch band structures, DOS, Berry curvature and Kronig-Penney, checked against analytic formulas."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Georgii Baiev" }]
 keywords = ["tight-binding", "solid-state-physics", "band-structure", "topological", "education"]
 classifiers = [
@@ -16,7 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Physics",
     "Typing :: Typed",
@@ -26,6 +27,9 @@ dependencies = [
     "scipy>=1.9",
     "matplotlib>=3.6",
 ]
+
+[project.urls]
+Repository = "https://github.com/GodelKu/tightbinding-lab"
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "ruff>=0.4", "mypy>=1.8"]
@@ -60,6 +64,9 @@ ignore = [
 "tools/fill_readme.py" = ["E501"]  # markdown lines
 
 [tool.mypy]
-python_version = "3.10"
+# no python_version: mypy checks against the interpreter it runs on (CI: 3.10 to 3.13), so the
+# installed numpy stubs always match the target version
+files = ["src"]
 ignore_missing_imports = true
 check_untyped_defs = true
+warn_redundant_casts = true

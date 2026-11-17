@@ -1,6 +1,6 @@
 # tblab: a tight-binding lab, checked against analytic results
 
-[![CI](https://github.com/GodelKu/tightbinding-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/GodelKu/tightbinding-lab/actions/workflows/ci.yml)
+[![CI](https://github.com/GodelKu/tightbinding-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/GodelKu/tightbinding-lab/actions/workflows/ci.yml) ![Python 3.10 to 3.13](https://img.shields.io/badge/python-3.10%20to%203.13-blue) ![License MIT](https://img.shields.io/badge/license-MIT-green)
 
 `tblab` is a small, from-scratch Python package for the tight-binding toolbox of an
 introductory solid-state course: band structures along high-symmetry paths, density of states
@@ -53,6 +53,9 @@ tblab phase --t2 0.1                           # Haldane phase diagram (phi, M/t
 tblab kp --v0 20 --well 1 --barrier 0.3        # Kronig-Penney vs plane waves
 tblab verify                                   # analytic-vs-numeric table (exit code 1 on failure)
 ```
+
+Invalid input (for example `--w 0`, `--nk 1` or a parameter the chosen model does not have)
+stops with a message and exit code 2.
 
 Example, with the real output of `tblab bands graphene --path G-K-M-G --out docs`:
 
@@ -267,8 +270,13 @@ free parameters here, not fitted values.)
 
 ```bash
 pytest
-ruff check .
+ruff check . && ruff format --check .
+mypy
 ```
+
+CI runs these four steps and a command-line smoke test on Linux, macOS and Windows with Python
+3.10 to 3.13. The tests of planned features in `tests/test_roadmap.py` are marked as expected
+failures (see [Roadmap](#roadmap)).
 
 | file | what is compared with what |
 | --- | --- |
@@ -281,8 +289,10 @@ ruff check .
 | `test_dos.py` | second-order convergence against a dense histogram for a band without inversion or mirror symmetry (both triangles of every cell are used); exact normalisation; chain cumulative DOS; square DOS vs elliptic integral; graphene linear DOS, particle-hole symmetry and van Hove peak; Gaussian vs tetrahedron; SSH gap |
 | `test_kronig_penney.py` | free limit; `E = V0` continuity and closed form; transcription of both branches; plane-wave eigenvalues satisfy the analytic condition; convergence with basis size; band edges at `\|f\| = 1`; isolated-well limit; bandwidth vs barrier width |
 | `test_kpath.py` | K and K′ labels against their hand-derived Cartesian positions; path parsing, segment lengths from hand-derived geometry, BZ area `(2π)²/A`, K/M positions |
-| `test_cli.py` | every sub-command writes a valid PNG (magic bytes) and JSON with the expected results; the DOS deviation recomputed from the JSON with scipy; phase-diagram entries against hand values on both sides of `\|M/t2\| = 3√3 \|sin φ\|`; a failing check makes `tblab verify` exit with 1; error codes; angle parser (no `eval`) |
+| `test_cli.py` | every sub-command writes a valid PNG (magic bytes) and JSON with the expected results; the DOS deviation recomputed from the JSON with scipy; phase-diagram entries against hand values on both sides of `\|M/t2\| = 3√3 \|sin φ\|`; a failing check makes `tblab verify` exit with 1; invalid input and parameters the model does not have stop with exit code 2 and a message; the trivial SSH phase has no edge-mode labels; angle parser (no `eval`) |
 | `test_verify.py` | all checks in `tblab verify` pass |
+| `test_readme_sync.py` | every generated README block equals what `tools/fill_readme.py` builds from `docs/*.json` |
+| `test_roadmap.py` | known answers for the planned extensions, `xfail(strict=True)` until implemented |
 
 As a check on the tests themselves, the independent review described in
 [How this was built](#how-this-was-built) applied deliberate bugs (mutations) to the code one at a
@@ -383,6 +393,14 @@ python tools/fill_readme.py         # after the mutation check, to update its bl
   algebraically for a discontinuous potential.
 - No performance benchmarks are claimed; large DOS grids are slow in pure NumPy.
 - The plots are static PNGs; there is no interactive viewer.
+
+## Roadmap
+
+[`docs/ROADMAP.md`](docs/ROADMAP.md) lists five extensions, each with a known-answer test that
+is marked as an expected failure until it is implemented: hybrid Wannier charge centres of the
+Haldane model, the chiral edge states of a Haldane ribbon, the Kane-Mele model and its Z2
+invariant, the Hofstadter butterfly with Chern numbers from the Středa formula, and Dirac points
+moved and merged by strain. [`CHANGELOG.md`](CHANGELOG.md) lists what changed in each version.
 
 ## References
 

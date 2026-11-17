@@ -5,32 +5,34 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      MPLBACKEND: Agg
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python }}
           cache: pip
-      - name: Install package with dev extras
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
-      - name: Lint (ruff)
-        run: ruff check .
-      - name: Tests
-        env:
-          MPLBACKEND: Agg
-        run: pytest
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check . && ruff format --check .
+        shell: bash
+      - run: mypy
+      - run: pytest -q
       - name: CLI smoke test
-        env:
-          MPLBACKEND: Agg
+        shell: bash
         run: |
           tblab bands graphene --path G-K-M-G --out ci_output
           test -s ci_output/graphene_bands.png

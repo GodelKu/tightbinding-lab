@@ -1,5 +1,5 @@
 {
-  "tblab_version": "0.1.0",
+  "tblab_version": "0.2.0",
   "checks": [
     {
       "check": "chain (t2 = 0.25): Bloch vs real space, 64 cells",

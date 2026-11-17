@@ -332,11 +332,22 @@ MODELS: dict[str, type[BlochModel]] = {
 
 
 def make_model(name: str, **kwargs: float | None) -> BlochModel:
-    """Instantiate a model by name, ignoring ``None`` keyword values and unknown fields."""
+    """Instantiate a model by name. ``None`` values are skipped (the model default is used).
+
+    A parameter the model does not have raises ``ValueError`` instead of being ignored silently.
+    """
     try:
         cls = MODELS[name.lower()]
     except KeyError:
         raise ValueError(f"unknown model {name!r}; choose from {sorted(MODELS)}") from None
-    fields = set(cls.__dataclass_fields__)  # type: ignore[attr-defined]
-    clean = {k: v for k, v in kwargs.items() if v is not None and k in fields}
-    return cls(**clean)
+    fields = list(cls.__dataclass_fields__)  # type: ignore[attr-defined]
+    given = {k: v for k, v in kwargs.items() if v is not None}
+    unknown = sorted(set(given) - set(fields))
+    if unknown:
+        raise ValueError(
+            f"model {cls.name!r} has no parameter(s) {', '.join(unknown)}; "
+            f"its parameters are {', '.join(fields)}"
+        )
+    if given.get("a", 1.0) <= 0:
+        raise ValueError("the lattice constant a must be positive")
+    return cls(**given)

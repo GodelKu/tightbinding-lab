@@ -113,7 +113,7 @@ def _minimum_image(d: FloatArray, periods: FloatArray) -> FloatArray:
     """Shortest periodic image of displacement vectors ``d`` (shape ``(..., 2)``)."""
     frac = d @ np.linalg.inv(periods)
     frac -= np.round(frac)
-    best = frac @ periods
+    best: np.ndarray = frac @ periods
     # rounding in the oblique basis can miss the shortest image: also try the neighbours
     for s1 in (-1, 0, 1):
         for s2 in (-1, 0, 1):
