@@ -2,9 +2,13 @@ import argparse
 import json
 import math
 
+import numpy as np
 import pytest
+from scipy.special import ellipk
 
+import tblab.cli
 from tblab.cli import main, parse_angle
+from tblab.verify import _row
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
@@ -85,9 +89,18 @@ def test_bad_path_label_gives_error_code(tmp_path, capsys):
 def test_dos_square_json_normalised_and_close_to_analytic(tmp_path):
     assert main(["dos", "square", "--nk", "80", "--ne", "301", "--out", str(tmp_path)]) == 0
     assert _png_ok(tmp_path / "square_dos.png")
-    r = json.loads((tmp_path / "square_dos.json").read_text())["results"]
+    d = json.loads((tmp_path / "square_dos.json").read_text())
+    r = d["results"]
     assert r["integral[linear tetrahedron / triangle]"] == pytest.approx(1.0, abs=1e-3)
-    assert r["max_rel_deviation_from_analytic"] < 0.05
+    # the reported deviation must be the deviation from the elliptic-integral DOS, recomputed
+    # here from the JSON arrays with scipy (independent of tblab.analytic and of the CLI code)
+    e = np.array(d["energies"])
+    dos = np.array(d["dos"]["linear tetrahedron / triangle"])
+    sel = (np.abs(e) > 0.3) & (np.abs(e) < 3.7)
+    exact = ellipk(1.0 - (e[sel] / 4.0) ** 2) / (2.0 * math.pi**2)
+    own = float(np.max(np.abs(dos[sel] - exact) / exact))
+    assert r["max_rel_deviation_from_analytic"] == pytest.approx(own, rel=1e-9)
+    assert 1e-4 < own < 0.02  # a real discretisation error at nk = 80, not zero
 
 
 def test_ssh_command(tmp_path):
@@ -146,12 +159,53 @@ def test_phase_command_small_grid(tmp_path):
     assert r["points_disagreeing_with_analytic"] == 0
 
 
+def test_phase_diagram_axes_against_hand_values(tmp_path):
+    """The M axis is in units of t2: the boundary must sit at |M/t2| = 3√3 |sin φ|.
+
+    Hand values (t2 = 0.1, so the critical mass at φ = ±π/2 is 3√3 t2 = 0.52): C(π/2, M/t2 = 0)
+    = -1, C(π/2, ±5) = -1 (inside, 5 < 5.196), C(π/2, ±6) = 0, C(-π/2, 0) = +1.
+    """
+    assert main(["phase", "--n", "13", "--nk", "18", "--no-plot", "--out", str(tmp_path)]) == 0
+    d = json.loads((tmp_path / "haldane_phase.json").read_text())
+    phi, m = np.array(d["phi"]), np.array(d["M_over_t2"])
+    chern = np.array([[np.nan if c is None else c for c in row] for row in d["chern"]])
+    i_up = int(np.argmin(np.abs(phi - math.pi / 2)))
+    i_down = int(np.argmin(np.abs(phi + math.pi / 2)))
+
+    def c(i: int, mass: float) -> float:
+        return float(chern[i, int(np.argmin(np.abs(m - mass)))])
+
+    assert [c(i_up, x) for x in (0.0, 5.0, -5.0, 6.0, -6.0)] == [-1, -1, -1, 0, 0]
+    assert c(i_down, 0.0) == 1
+    # every point clearly away from the boundary: topological iff |M/t2| < 3√3 |sin φ|
+    boundary = 3 * math.sqrt(3) * np.abs(np.sin(phi))[:, None]
+    far = np.abs(np.abs(m)[None, :] - boundary) > 0.1
+    inside = np.abs(m)[None, :] < boundary
+    assert far.sum() > 100
+    assert np.array_equal(chern[far] != 0, inside[far])
+
+
 def test_kp_command(tmp_path):
     assert main(["kp", "--nk", "21", "--out", str(tmp_path)]) == 0
     assert _png_ok(tmp_path / "kronig_penney.png")
     r = json.loads((tmp_path / "kronig_penney.json").read_text())["results"]
     assert max(r["max_abs_energy_difference_analytic_vs_planewave"]) < 1e-4
     assert len(r["band_edges"]) == 4
+
+
+def test_verify_row_can_fail():
+    assert _row("x", 1.0, 1.0 + 1e-9, 1e-6)["passed"] is True
+    assert _row("x", 1.0, 1.1, 1e-6)["passed"] is False
+    rel = _row("x", 2.0, 2.2, 0.05, "rel")
+    assert rel["error"] == pytest.approx(0.1) and rel["passed"] is False
+
+
+def test_verify_command_exits_1_when_a_check_fails(monkeypatch, capsys):
+    failing = [_row("ok", 0.0, 0.0, 1e-9), _row("broken", 0.0, 1.0, 1e-9)]
+    monkeypatch.setattr(tblab.cli, "run_checks", lambda: failing)
+    assert main(["verify"]) == 1
+    out = capsys.readouterr().out
+    assert "FAIL" in out and "1/2 checks passed" in out
 
 
 def test_verify_command_exit_code_and_json(tmp_path, capsys):

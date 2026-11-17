@@ -5,7 +5,7 @@ import pytest
 
 from tblab import analytic as an
 from tblab.analysis import dirac_velocity, direct_gap, find_dirac_points
-from tblab.bands import compute_bands
+from tblab.bands import BandResult, compute_bands
 from tblab.dos import uniform_grid
 from tblab.models import Graphene
 
@@ -66,8 +66,10 @@ def test_linear_dispersion_along_path():
     assert slope == pytest.approx(1.5, rel=1e-2)
 
 
-def test_find_dirac_points_gives_K_and_Kprime():
-    pts = find_dirac_points(Graphene())
+@pytest.mark.parametrize("n", [50, 61, 71])
+def test_find_dirac_points_gives_K_and_Kprime(n):
+    # n not divisible by 3: K and K' are not nodes of the scan grid, the minimiser must find them
+    pts = find_dirac_points(Graphene(), n=n)
     assert pts.shape == (2, 2)
     expect = [np.array([1 / 3, 2 / 3]), np.array([2 / 3, 1 / 3])]
     for e in expect:
@@ -83,6 +85,13 @@ def test_sublattice_mass_opens_gap_2m():
         e = res.energies
         assert (e[:, 1] - e[:, 0]).min() == pytest.approx(2 * m, rel=1e-3)
         assert res.max_abs_error < 1e-12
+
+
+def test_max_abs_error_measures_a_wrong_reference():
+    res = compute_bands(Graphene(), "G-K-M-G", 50)
+    assert res.analytic is not None
+    shifted = BandResult(res.model, res.path, res.energies, res.analytic[:, ::-1] + 0.25)
+    assert shifted.max_abs_error == pytest.approx(0.25, abs=1e-12)
 
 
 def test_k_path_gamma_K_M_gamma_default():

@@ -2,11 +2,12 @@ import math
 
 import numpy as np
 import pytest
+from scipy.integrate import quad
 
 from tblab import analytic as an
 from tblab.models import SSH
 from tblab.ssh import ssh_edge_modes, ssh_open_hamiltonian, ssh_spectrum_sweep
-from tblab.topology import ssh_winding_number, zak_phase
+from tblab.topology import berry_phase, ssh_winding_number, zak_phase
 
 
 @pytest.mark.parametrize("v,w", [(1.0, 0.5), (0.5, 1.0), (0.3, 0.9)])
@@ -88,6 +89,43 @@ def test_zak_phase_quantised_and_matches_winding(v, w):
     # both bands carry opposite Zak phases (equal mod 2π for a two-band chiral model)
     z1 = zak_phase(SSH(v=v, w=w), band=1, nk=400)
     assert math.cos(z - z1) == pytest.approx(1.0, abs=1e-9)
+
+
+def _rice_mele_lower_band(k: np.ndarray, v: float, w: float, delta: float) -> np.ndarray:
+    q = v + w * np.exp(-1j * k)
+    h = np.zeros((*k.shape, 2, 2), dtype=complex)
+    h[..., 0, 0], h[..., 1, 1], h[..., 0, 1], h[..., 1, 0] = delta, -delta, q, np.conj(q)
+    return np.linalg.eigh(h)[1][..., 0]
+
+
+def _rice_mele_berry_phase(v: float, w: float, delta: float) -> float:
+    """γ = ∮ i⟨u|∂k u⟩ dk from the smooth gauge u = (-sin(α/2) e^{iθ}, cos(α/2)).
+
+    With q = v + w e^{-ik} = |q| e^{iθ} and cos α = Δ/E, E = sqrt(Δ² + |q|²), the connection is
+    A = i⟨u|∂k u⟩ = -θ'(k) sin²(α/2) = -θ'(k) (1 - Δ/E) / 2. Integrated by quadrature; no
+    eigenvectors, no discretised loop. Returned in (-π, π].
+    """
+
+    def connection(k: float) -> float:
+        q = v + w * np.exp(-1j * k)
+        dtheta = float((-1j * w * np.exp(-1j * k) / q).imag)
+        energy = math.sqrt(delta**2 + abs(q) ** 2)
+        return -dtheta * 0.5 * (1.0 - delta / energy)
+
+    gamma = quad(connection, 0.0, 2.0 * math.pi, limit=200)[0]
+    return math.remainder(gamma, 2.0 * math.pi)
+
+
+@pytest.mark.parametrize(
+    "v,w,delta", [(0.5, 1.0, 0.3), (0.5, 1.0, -0.3), (1.0, 0.5, 0.3), (1.0, 1.0, 0.4)]
+)
+def test_berry_phase_sign_against_rice_mele_continuum_formula(v, w, delta):
+    """A staggered on-site energy ±Δ unquantises the Zak phase, so its sign is testable."""
+    k = 2 * math.pi * np.arange(400) / 400
+    numeric = berry_phase(_rice_mele_lower_band(k, v, w, delta))
+    exact = _rice_mele_berry_phase(v, w, delta)
+    assert abs(exact) > 0.1 and abs(abs(exact) - math.pi) > 0.1  # neither 0 nor π
+    assert numeric == pytest.approx(exact, abs=1e-4)  # discretisation error ~3e-5 at 400 points
 
 
 def test_zak_phase_is_gauge_invariant_under_k_shift_of_start():

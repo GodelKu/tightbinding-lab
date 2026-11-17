@@ -105,7 +105,13 @@ def run_checks() -> list[Check]:
     # 6. SSH
     em = ssh_edge_modes(40, 0.5, 1.0)
     rows.append(
-        _row("SSH (v=.5,w=1, N=40): max |E_edge|", 0.0, float(np.abs(em.zero_energies).max()), 1e-9)
+        _row(
+            "SSH (v=.5,w=1, N=40): |E_edge| vs w(v/w)^N(1-(v/w)²)",
+            an.ssh_edge_splitting(0.5, 1.0, 40),
+            float(np.abs(em.zero_energies).mean()),
+            1e-3,
+            "rel",
+        )
     )
     rows.append(_row("SSH: edge decay ratio |v/w|", 0.5, em.decay_ratio, 1e-6, "rel"))
     rows.append(
@@ -126,20 +132,26 @@ def run_checks() -> list[Check]:
             1e-6,
         )
     )
-    gk = float(direct_gap(h, np.array(h.special_points["K"])))
-    gkp = float(direct_gap(h, np.array(h.special_points["Kp"])))
-    rows.append(
-        _row("Haldane: gap at K,K' (M=0) = 2·3√3 t2 sinφ", an.haldane_dirac_gaps(h)[0], gk, 1e-12)
-    )
-    rows.append(_row("Haldane: gap K' equals gap K at M=0", gk, gkp, 1e-12))
+    hm = Haldane(t2=0.1, phi=math.pi / 2, mass=0.3)
+    gaps = an.haldane_dirac_gaps(hm)
+    for label, value in (("K", gaps[0]), ("Kp", gaps[1])):
+        sign = "-" if label == "K" else "+"
+        rows.append(
+            _row(
+                f"Haldane (M=0.3): gap at {label} = 2|M {sign} 3√3 t2 sinφ|",
+                value,
+                float(direct_gap(hm, np.array(hm.special_points[label]))),
+                1e-12,
+            )
+        )
 
     # 8. Kronig-Penney
     kp = KronigPenney()
-    k, ea = kp.dispersion(3, nk=9)
-    ep = kp.plane_wave_bands(k, 3, n_pw=100)
+    k, ea = kp.dispersion(4, nk=21)
+    ep = kp.plane_wave_bands(k, 4, n_pw=100)
     rows.append(
         _row(
-            "Kronig-Penney: max |E_analytic - E_planewave| (3 bands)",
+            "Kronig-Penney: max |E_analytic - E_planewave| (4 bands)",
             0.0,
             float(np.abs(ea - ep).max()),
             1e-4,

@@ -97,6 +97,19 @@ def ssh_edge_decay_ratio(v: float, w: float) -> float:
     return -v / w
 
 
+def ssh_edge_splitting(v: float, w: float, n_cells: int) -> float:
+    """Leading-order energy ``|E|`` of the two edge states of an open chain of ``n_cells`` cells.
+
+    The left edge state lives on A sites with amplitudes ``r^n`` (``r = -v/w``), the right one on
+    B sites with ``r^(N-1-n)``. ``H`` acting on the right state leaves only ``v r^(N-1)`` on the
+    first A site, so the coupling of the two normalised states is
+    ``v |r|^(N-1) (1 - r²) = w |v/w|^N (1 - (v/w)²)``, up to relative corrections of order
+    ``(v/w)^(2N)``. Meaningful for ``|w| > |v|``.
+    """
+    r = abs(v / w)
+    return abs(w) * r**n_cells * (1.0 - r * r)
+
+
 def ssh_zak_phase_expected(v: float, w: float) -> float:
     """Zak phase of the lower band (mod 2π) in the inversion-symmetric cell: π if w > v."""
     return math.pi if abs(w) > abs(v) else 0.0
@@ -131,8 +144,8 @@ def haldane_energy(model: Haldane, kfrac: Any) -> FloatArray:
     """Closed form ``E± = d0 ± sqrt(|f|² + dz²)``.
 
     ``d0 = 2 t2 cos φ Σ_i cos(k·b_i)`` and ``dz = M + s·2 t2 sin φ Σ_i sin(k·b_i)`` with the three
-    next-nearest-neighbour vectors ``b_i`` at 120° to each other. ``s`` is the sign fixed by this
-    package's chirality convention (:data:`HALDANE_SIGN`).
+    next-nearest-neighbour vectors ``b_i = a1, a2 - a1, -a2`` at 120° to each other. ``s`` is the
+    sign set by this package's chirality convention (:data:`HALDANE_SIGN`).
     """
     kc = model.cart(kfrac)
     a1, a2, _ = _hex_geometry(model.a)
@@ -145,7 +158,11 @@ def haldane_energy(model: Haldane, kfrac: Any) -> FloatArray:
     return np.stack([d0 - r, d0 + r], axis=-1)
 
 
-HALDANE_SIGN = -1.0  # fixed by comparing with the Hamiltonian; see tests/test_haldane.py
+#: From an A site the hops b = a1, a2 - a1, -a2 turn right (ν = -1), so with amplitude
+#: t2 e^{iνφ} and Bloch factor e^{-ik·b}: h_AA = 2 t2 Σ cos(k·b + φ), h_BB = 2 t2 Σ cos(k·b - φ),
+#: hence dz = M + (h_AA - h_BB)/2 = M - 2 t2 sin φ Σ sin(k·b). Derived by hand in
+#: tests/test_haldane.py (valley gaps) and checked against the Hamiltonian there.
+HALDANE_SIGN = -1.0
 
 
 def reference_bands(model: BlochModel, kfrac: Any) -> FloatArray | None:

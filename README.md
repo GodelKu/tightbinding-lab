@@ -108,7 +108,8 @@ the reciprocal lattice.
   makes the one-sided error O(q), and is verified to converge as `dq²`). Tests cover several `(t, a)`,
   both valleys and five directions.
 - `find_dirac_points` finds the gap minima numerically (grid scan + Nelder-Mead) and returns
-  `(1/3, 2/3)` and `(2/3, 1/3)` without being told where they are.
+  `(1/3, 2/3)` and `(2/3, 1/3)` without being told where they are; the default scan grid
+  (61 × 61) does not contain K or K′, and the tests also use 50 and 71.
 
 ![Square and chain](docs/square_bands.png)
 
@@ -237,19 +238,22 @@ ruff check .
 | `test_chain_square.py` | Bloch bands vs real-space rings and tori (with second-neighbour hopping); the ring spectrum vs `ε - 2t cos(2πm/n) - 2t2 cos(4πm/n)`; effective mass `t a²` at the band bottom by finite difference; `E(Γ,X,M) = -4t, 0, +4t` |
 | `test_realspace.py` | SSH, graphene and Haldane Bloch bands vs real-space supercells; coordination numbers; sensitivity to `φ` (and blindness to `φ → -φ`) |
 | `test_graphene.py` | bands vs `±\|f(k)\|`; particle-hole symmetry; `E(Γ) = ±3t`, `E(M) = ±t`; gap 0 at K/K'; Dirac velocity `3ta/2` for 3 parameter sets × 2 valleys × 5 directions; `dq²` convergence; slope fit along K→Γ; numerically located Dirac points; gap `2m` with a sublattice mass |
-| `test_ssh.py` | bulk `±\|v + w e^{-ik}\|`, gap `2\|v-w\|`; chiral symmetry of the open chain; two zero modes iff `w > v` with `\|E\| ≲ w (v/w)^N`; analytic zero mode `(-v/w)^n` inside the numerical zero-mode subspace; fitted decay ratio; sublattice/edge localisation; Zak phase 0/π, winding number, gauge invariance |
-| `test_haldane.py` | Hermiticity and exact periodicity `H(k+G) = H(k)`; reduces to graphene at `t2 = 0`; closed-form bands; valley gaps `2\|M ∓ 3√3 t2 sin φ\|`; `C = ±1` / `0`; sign under `φ → -φ`; independence of grid size and origin; gauge invariance of the plaquette product; FHS curvature vs the `d`-vector formula; scan over `(φ, M)` against the analytic boundary |
+| `test_ssh.py` | sign of the Berry phase against a continuum formula for the Rice-Mele chain (staggered on-site `±Δ`, phase not quantised); bulk `±\|v + w e^{-ik}\|`, gap `2\|v-w\|`; chiral symmetry of the open chain; two zero modes iff `w > v` with `\|E\| ≲ w (v/w)^N`; analytic zero mode `(-v/w)^n` inside the numerical zero-mode subspace; fitted decay ratio; sublattice/edge localisation; Zak phase 0/π, winding number, gauge invariance |
+| `test_haldane.py` | Hermiticity and exact periodicity `H(k+G) = H(k)`; reduces to graphene at `t2 = 0`; closed-form bands; valley gaps `2\|M ∓ 3√3 t2 sin φ\|` assigned to the labelled valleys (derived by hand); `C = ±1` / `0`; Chern sign against the Kubo formula; sign under `φ → -φ`; independence of grid size and origin; gauge invariance of the plaquette product; FHS curvature vs the `d`-vector formula; scan over `(φ, M)` against the analytic boundary |
 | `test_chern_guard.py` | gapless graphene is refused on and between grid nodes; a too coarse grid near the transition is refused; the CLI refuses gapless parameters |
-| `test_dos.py` | exact normalisation; chain cumulative DOS; square DOS vs elliptic integral; graphene linear DOS, particle-hole symmetry and van Hove peak; Gaussian vs tetrahedron; SSH gap |
+| `test_dos.py` | second-order convergence against a dense histogram for a band without inversion or mirror symmetry (both triangles of every cell are used); exact normalisation; chain cumulative DOS; square DOS vs elliptic integral; graphene linear DOS, particle-hole symmetry and van Hove peak; Gaussian vs tetrahedron; SSH gap |
 | `test_kronig_penney.py` | free limit; `E = V0` continuity and closed form; transcription of both branches; plane-wave eigenvalues satisfy the analytic condition; convergence with basis size; band edges at `\|f\| = 1`; isolated-well limit; bandwidth vs barrier width |
-| `test_kpath.py` | path parsing, segment lengths from hand-derived geometry, BZ area `(2π)²/A`, K/M positions |
-| `test_cli.py` | every sub-command writes a valid PNG (magic bytes) and JSON with the expected results; error codes; angle parser (no `eval`) |
+| `test_kpath.py` | K and K′ labels against their hand-derived Cartesian positions; path parsing, segment lengths from hand-derived geometry, BZ area `(2π)²/A`, K/M positions |
+| `test_cli.py` | every sub-command writes a valid PNG (magic bytes) and JSON with the expected results; the DOS deviation recomputed from the JSON with scipy; phase-diagram entries against hand values on both sides of `\|M/t2\| = 3√3 \|sin φ\|`; a failing check makes `tblab verify` exit with 1; error codes; angle parser (no `eval`) |
 | `test_verify.py` | all checks in `tblab verify` pass |
 
 As a check on the tests themselves, the independent review described in
 [How this was built](#how-this-was-built) applied deliberate bugs (mutations) to the code one at a
 time and ran the suite against each; the mutations it did not catch are listed in
 [`CHANGELOG.md`](CHANGELOG.md) together with the tests added for them.
+[`tools/mutation_check.py`](tools/mutation_check.py) repeats the experiment with the review's
+mutations plus mutations of the code added in version 0.2 and writes the outcome to
+[`docs/mutation_check.json`](docs/mutation_check.json).
 
 ## Conventions
 
@@ -261,10 +265,15 @@ time and ran the suite against each; the mutations it did not catch are listed i
 - Berry connection `A = i⟨u|∇u⟩`, curvature `Ω = ∂x Ay − ∂y Ax`, `C = (1/2π)∫Ω d²k`. With the
   next-nearest-neighbour chirality ν defined as +1 for a left turn, this code gives `C = -sign(t2 sin φ)`
   in the topological phase. The sign depends on conventions; the magnitude and the phase boundary do not.
-- The Haldane closed-form band formula in `analytic.py` contains one sign (`HALDANE_SIGN`) that was
-  fixed by comparing with the Hamiltonian, so that particular comparison validates the *structure*
-  (`d0`, `|f|`, `dz` and the 120° vectors) rather than the sign. The independent checks are the valley
-  gaps, the gap-closing condition, the Chern number and the `d`-vector curvature.
+- K and K′: `K = (1/3, 2/3)` in reduced coordinates is the zone corner at polar angle 60°,
+  `K′ = (2/3, 1/3)` the corner on the `+kx` axis (lattice `a1 = (√3a, 0)`,
+  `a2 = (√3a/2, 3a/2)`). Which corner is called K is a convention; the tests pin it. With it the
+  Haldane gap is `2|M - 3√3 t2 sin φ|` at K and `2|M + 3√3 t2 sin φ|` at K′.
+- The sign in the Haldane closed form (`HALDANE_SIGN` in `analytic.py`) was first fixed by
+  comparing with the Hamiltonian. It also follows by hand: from an A site the hops along `a1`,
+  `a2 - a1` and `-a2` turn right (`ν = -1`), so `dz = M - 2 t2 sin φ Σ sin(k·b)`; the valley-gap
+  test spells out this derivation. The Chern-number sign is checked by two methods that do not
+  use the closed form: the `d`-vector curvature and the Kubo formula.
 
 ## Project layout
 

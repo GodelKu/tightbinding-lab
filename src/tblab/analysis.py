@@ -41,11 +41,12 @@ def dirac_velocity(
     return float(0.5 * (est[0] + est[1]))
 
 
-def find_dirac_points(model: BlochModel, n: int = 60, tol: float = 1e-6) -> NDArray[np.float64]:
+def find_dirac_points(model: BlochModel, n: int = 61, tol: float = 1e-6) -> NDArray[np.float64]:
     """Locate band touchings between bands 0 and 1 in the 2D BZ.
 
     A fractional ``n × n`` grid is scanned for periodic local minima of the direct gap; each is
-    refined with Nelder-Mead. Returns unique points (mod 1) with refined gap below ``tol``.
+    refined with Nelder-Mead. Returns unique points (mod 1) with refined gap below ``tol``. The
+    default ``n`` is not a multiple of 3, so the hexagonal K and K' are not scan-grid nodes.
     """
     if model.dim != 2:
         raise ValueError("find_dirac_points is implemented for 2D models only")

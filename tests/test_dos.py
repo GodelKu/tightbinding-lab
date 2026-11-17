@@ -1,9 +1,69 @@
+from typing import Any, ClassVar
+
 import numpy as np
 import pytest
 
 from tblab import analytic as an
 from tblab.dos import dos_gaussian, dos_tetrahedron, integrate
-from tblab.models import SSH, Chain, Graphene, Square
+from tblab.models import SSH, BlochModel, Chain, Graphene, Square
+
+
+def _lopsided_band(k1: Any, k2: Any) -> Any:
+    x, y = 2 * np.pi * np.asarray(k1), 2 * np.pi * np.asarray(k2)
+    return -2.0 * np.cos(x) - 1.5 * np.cos(y) + 0.7 * np.sin(x + 2 * y)
+
+
+class Lopsided(BlochModel):
+    """One band without inversion (E(k) != E(-k)) or k1 <-> k2 mirror symmetry.
+
+    Every grid cell is cut into two triangles along the same diagonal. Inversion and the mirror
+    k1 <-> k2 map one triangle of a cell onto the other, so for the symmetric textbook models a
+    DOS computed from only one kind of triangle would look correct. This band has neither
+    symmetry.
+    """
+
+    name: ClassVar[str] = "lopsided"
+    norb: ClassVar[int] = 1
+    default_path: ClassVar[str] = "G-X"
+
+    @property
+    def lattice(self) -> Any:
+        return np.eye(2)
+
+    @property
+    def special_points(self) -> dict[str, tuple[float, ...]]:
+        return {"G": (0.0, 0.0), "X": (0.5, 0.0)}
+
+    def hamiltonian(self, k: Any) -> Any:
+        f = np.asarray(k) / (2 * np.pi)  # lattice = identity: fractional = k / 2π
+        return (_lopsided_band(f[..., 0], f[..., 1]) + 0j)[..., None, None]
+
+
+def _histogram_dos(energies: np.ndarray, n: int) -> np.ndarray:
+    """Bin-averaged DOS from a histogram of the band on an n x n midpoint grid (no triangles)."""
+    de = energies[1] - energies[0]
+    edges = np.append(energies - 0.5 * de, energies[-1] + 0.5 * de)
+    f = (np.arange(n) + 0.5) / n
+    counts = np.zeros(len(energies))
+    for start in range(0, n, 500):
+        e = _lopsided_band(f[start : start + 500, None], f[None, :])
+        counts += np.histogram(e.ravel(), edges)[0]
+    return counts / n**2 / de
+
+
+def test_triangle_dos_converges_at_second_order_for_a_band_without_symmetry():
+    """Linear interpolation on a correct tiling of the cell has an O(1/nk²) error.
+
+    Reference: a 4000 x 4000 histogram of the band (independent of the triangle code). Measured
+    max deviation 1.4e-3 at nk = 100 and 3.5e-4 at nk = 200. If one of the two triangles of
+    each cell were missing, half of the zone would never be sampled and the error would fall
+    only like 1/nk (1.3e-3 at nk = 200).
+    """
+    e = np.linspace(-4.0, 4.0, 81)
+    ref = _histogram_dos(e, 4000)
+    err = {nk: np.abs(dos_tetrahedron(Lopsided(), e, nk) - ref).max() for nk in (100, 200)}
+    assert err[200] < 6e-4
+    assert err[100] / err[200] > 3.0
 
 
 def test_tetrahedron_dos_is_normalised_exactly():

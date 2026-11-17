@@ -13,6 +13,21 @@ from tblab.kpath import (
 from tblab.models import Graphene, Square
 
 
+@pytest.mark.parametrize("a", [1.0, 1.42])
+def test_K_and_Kprime_labels(a):
+    """Convention: K is the zone corner at polar angle 60°, K' the corner on the +kx axis.
+
+    Lattice a1 = (√3a, 0), a2 = (√3a/2, 3a/2); the corners lie at |k| = 4π/(3√3 a). Which
+    corner is called K is a convention; this test pins it.
+    """
+    g = Graphene(a=a)
+    r = 4 * math.pi / (3 * math.sqrt(3) * a)
+    kc = g.cart(np.array(g.special_points["K"]))
+    kpc = g.cart(np.array(g.special_points["Kp"]))
+    assert kc == pytest.approx(r * np.array([0.5, math.sqrt(3) / 2]), abs=1e-12)
+    assert kpc == pytest.approx(r * np.array([1.0, 0.0]), abs=1e-12)
+
+
 def test_parse_path_aliases():
     assert parse_path("G-K-M-G") == ["G", "K", "M", "G"]
     assert parse_path("Γ - K' - M") == ["G", "Kp", "M"]

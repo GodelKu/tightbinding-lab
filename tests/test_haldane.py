@@ -51,6 +51,49 @@ def test_valley_gaps_match_analytic(phi, mass):
     assert mid == pytest.approx(-3 * h.t2 * math.cos(phi), abs=1e-12)
 
 
+@pytest.mark.parametrize("phi,mass", [(math.pi / 2, 0.3), (1.0, -0.2), (-0.7, 0.1)])
+def test_valley_gaps_are_assigned_to_the_labelled_valleys(phi, mass):
+    """Hand derivation, ν = +1 for a left turn, hop amplitude t2 e^{iνφ} for c†_i c_j.
+
+    From an A site the hops b ∈ {a1, a2 - a1, -a2} turn right (ν = -1), so
+    h_AA(k) = 2 t2 Σ_b cos(k·b + φ) and h_BB(k) = 2 t2 Σ_b cos(k·b - φ). At K = (1/3, 2/3) every
+    k·b is ±2π/3 mod 2π with Σ sin(k·b) = 3√3/2, so h_AA - h_BB = -6√3 t2 sin φ and the gap at K
+    is 2|M - 3√3 t2 sin φ|; at K' it is 2|M + 3√3 t2 sin φ|.
+    """
+    h = Haldane(t2=0.1, phi=phi, mass=mass)
+    s = 3 * math.sqrt(3) * 0.1 * math.sin(phi)
+    assert float(direct_gap(h, K)) == pytest.approx(2 * abs(mass - s), abs=1e-12)
+    assert float(direct_gap(h, KP)) == pytest.approx(2 * abs(mass + s), abs=1e-12)
+
+
+def _kubo_chern(model: Haldane, nk: int, dk: float = 1e-6) -> float:
+    """C from the Kubo formula Ω₀ = -2 Im[⟨0|∂xH|1⟩⟨1|∂yH|0⟩] / (E₀ - E₁)².
+
+    Uses only H(k) and its finite-difference derivatives at plaquette centres: no link
+    variables, and the result does not depend on the phases of the eigenvectors.
+    """
+    f = (np.arange(nk) + 0.5) / nk
+    kc = model.cart(np.stack(np.meshgrid(f, f, indexing="ij"), -1).reshape(-1, 2))
+    e, u = np.linalg.eigh(model.hamiltonian(kc))
+    ex, ey = np.array([dk, 0.0]), np.array([0.0, dk])
+    hx = (model.hamiltonian(kc + ex) - model.hamiltonian(kc - ex)) / (2 * dk)
+    hy = (model.hamiltonian(kc + ey) - model.hamiltonian(kc - ey)) / (2 * dk)
+    mx = np.einsum("ki,kij,kj->k", u[..., 0].conj(), hx, u[..., 1])
+    my = np.einsum("ki,kij,kj->k", u[..., 1].conj(), hy, u[..., 0])
+    omega = -2.0 * np.imag(mx * my) / (e[:, 0] - e[:, 1]) ** 2
+    return float(omega.sum() * abs(np.linalg.det(model.reciprocal)) / nk**2 / (2 * math.pi))
+
+
+@pytest.mark.parametrize(
+    "phi,mass,nk", [(math.pi / 2, 0.0, 60), (-math.pi / 2, 0.0, 60), (1.0, 0.3, 120)]
+)
+def test_chern_sign_agrees_with_the_kubo_formula(phi, mass, nk):
+    h = Haldane(t2=0.1, phi=phi, mass=mass)
+    kubo = _kubo_chern(h, nk)
+    assert kubo == pytest.approx(round(kubo), abs=1e-3)
+    assert round(kubo) == chern_number(h, nk=60).chern_int == -np.sign(math.sin(phi))
+
+
 @pytest.mark.parametrize("phi", [math.pi / 2, math.pi / 3, 2.0])
 def test_chern_number_is_pm1_in_topological_phase(phi):
     h = Haldane(t2=0.1, phi=phi, mass=0.0)
