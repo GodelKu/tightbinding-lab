@@ -79,7 +79,7 @@ def run_checks() -> list[Check]:
     )
 
     # 4. graphene DOS in the linear regime
-    grid = np.linspace(-0.3, 0.3, 61)
+    grid = np.linspace(-0.3, 0.3, 61, dtype=np.float64)
     d = dos_tetrahedron(Graphene(), grid, 240)
     i = int(np.argmin(np.abs(grid - 0.1)))
     rows.append(
@@ -93,7 +93,7 @@ def run_checks() -> list[Check]:
     )
 
     # 5. square-lattice DOS (tetrahedron) at E = 2t
-    gs = np.linspace(1.5, 2.5, 21)
+    gs = np.linspace(1.5, 2.5, 21, dtype=np.float64)
     ds = dos_tetrahedron(Square(), gs, 200)
     j = int(np.argmin(np.abs(gs - 2.0)))
     rows.append(

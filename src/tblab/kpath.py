@@ -69,7 +69,7 @@ def build_kpath(model: BlochModel, labels: list[str], nk: int = 300) -> KPath:
     x0 = 0.0
     for i, length in enumerate(seg_len):
         n = max(2, round(nk * length / total))
-        t = np.linspace(0.0, 1.0, n)
+        t = np.linspace(0.0, 1.0, n, dtype=np.float64)
         kf = pts[i] + t[:, None] * (pts[i + 1] - pts[i])
         x = x0 + t * length
         if i > 0:

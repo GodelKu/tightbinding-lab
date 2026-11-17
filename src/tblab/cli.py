@@ -245,7 +245,7 @@ def cmd_dos(args: argparse.Namespace) -> int:
     hi = float(sample.max()) + pad if args.emax is None else float(args.emax)
     if not hi > lo:
         raise ValueError(f"empty energy window: emin = {lo:g} must be below emax = {hi:g}")
-    grid = np.linspace(lo, hi, args.ne)
+    grid = np.linspace(lo, hi, args.ne, dtype=np.float64)
     curves: dict[str, Any] = {}
     if args.method in ("tetra", "both"):
         curves["linear tetrahedron / triangle"] = dos_tetrahedron(model, grid, args.nk)
@@ -424,7 +424,7 @@ def cmd_kp(args: argparse.Namespace) -> int:
     k, ea = kp.dispersion(args.bands, nk=args.nk)
     ep = kp.plane_wave_bands(k, args.bands, n_pw=args.npw)
     e_max = float(ea.max()) * 1.05
-    e_grid = np.linspace(0.05, e_max, 3000)
+    e_grid = np.linspace(0.05, e_max, 3000, dtype=np.float64)
     f_grid = kp.rhs(e_grid)
     edges = kp.band_edges(e_max)[: args.bands]
     err = np.abs(ea - ep)

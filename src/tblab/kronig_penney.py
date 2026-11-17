@@ -63,15 +63,15 @@ class KronigPenney:
         are still found when ``|f|`` has a local extremum there, but features below double-precision
         resolution (e.g. bandwidths ~1e-25 for extremely thick barriers) cannot be resolved.
         """
-        grid = np.linspace(1e-6, e_max, n_scan)
+        grid = np.linspace(1e-6, e_max, n_scan, dtype=np.float64)
         h = np.abs(self.rhs(grid)) - 1.0
 
         def g(x: float) -> float:
             return float(np.abs(self.rhs(x)) - 1.0)
 
         edges: list[float] = []
-        for i in np.nonzero(np.sign(h[:-1]) != np.sign(h[1:]))[0]:
-            edges.append(brentq(g, grid[i], grid[i + 1], xtol=1e-13))
+        for j in np.nonzero(np.sign(h[:-1]) != np.sign(h[1:]))[0]:
+            edges.append(brentq(g, grid[j], grid[j + 1], xtol=1e-13))
         # bands narrower than the scan step never change the sign of h on the grid: look for
         # local minima of |f| above 1 and test whether they actually dip below 1
         for i in range(1, n_scan - 1):
@@ -107,7 +107,7 @@ class KronigPenney:
         bands = self.band_edges(e_max)
         if len(bands) < n_bands:
             raise RuntimeError("could not find enough bands; increase the energy window")
-        k = np.linspace(0.0, math.pi / self.period, nk)
+        k = np.linspace(0.0, math.pi / self.period, nk, dtype=np.float64)
         out = np.zeros((nk, n_bands))
         for n in range(n_bands):
             lo, hi = bands[n]
