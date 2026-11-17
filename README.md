@@ -1,5 +1,7 @@
 # tblab: a tight-binding lab, checked against analytic results
 
+[![CI](https://github.com/GodelKu/tightbinding-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/GodelKu/tightbinding-lab/actions/workflows/ci.yml)
+
 `tblab` is a small, from-scratch Python package for the tight-binding toolbox of an
 introductory solid-state course: band structures along high-symmetry paths, density of states
 (linear tetrahedron and Gaussian), topological edge states and Zak phase (SSH chain), Berry
@@ -11,7 +13,8 @@ headline claim is tested against a closed-form result**: `E(k) = -2t cos k`, the
 Kronig-Penney condition, and so on. All numbers and figures below were produced by running the
 code in this repository (see [Reproducing the figures](#reproducing-the-figures)).
 
-Author: Georgii Baiev (physics student, California State University, Northridge). MIT licence.
+Author: Georgii Baiev. MIT licence. How the code was written and reviewed is described in
+[How this was built](#how-this-was-built).
 
 ![Graphene bands and Brillouin zone](docs/graphene_bands.png)
 
@@ -20,7 +23,7 @@ Author: Georgii Baiev (physics student, California State University, Northridge)
 Python 3.10+ and `numpy`, `scipy`, `matplotlib`.
 
 ```bash
-git clone <this repository>
+git clone https://github.com/GodelKu/tightbinding-lab
 cd tightbinding-lab
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"      # package + pytest, ruff, mypy
@@ -32,7 +35,7 @@ Every command writes a PNG **and** a JSON file (parameters, results, raw arrays)
 (default `./tblab_output`).
 
 ```bash
-tblab bands graphene --path G-K-M-G            # the example from the brief
+tblab bands graphene --path G-K-M-G
 tblab bands square   --path G-X-M-G
 tblab bands ssh      --v 0.5 --w 1.0
 tblab bands haldane  --t2 0.1 --phi pi/2 --path G-K-M-Kp-G
@@ -105,10 +108,10 @@ constructed as Voronoi cells of the reciprocal lattice.
 - **Linear tetrahedron method** (segments in 1D, triangles in 2D): each simplex is a linear
   interpolation of `E_n(k)`. The code evaluates the *exact cumulative distribution* of that
   interpolant at bin edges and differences it, so `∫ DOS dE` equals the band count to rounding
-  error (tested to 1e-10) and flat or degenerate triangles (Dirac point on a grid node, band
-  edges) cannot produce spikes. This was a bug in my first version (a naive pointwise formula
-  gave `∫ DOS = 1e9` for graphene because a vertex sat exactly on the Dirac point); the cumulative
-  formulation fixed it.
+  error (tested to 1e-10). Triangles with two or three corners at the same energy (for example a
+  corner exactly on the Dirac point) need no special case: the cumulative function stays well
+  defined, while a pointwise formula divides by zero there (two equal corners) or has to represent
+  a delta function (three equal corners).
 
 | check | result (measured) |
 | --- | --- |
@@ -214,7 +217,7 @@ free parameters here, not fitted values.)
 ## Tests
 
 ```bash
-pytest            # 146 tests, ~10 s on the machine used for development
+pytest
 ruff check .
 ```
 
@@ -230,10 +233,10 @@ ruff check .
 | `test_cli.py` | every sub-command writes a valid PNG (magic bytes) and JSON with the expected results; error codes; angle parser (no `eval`) |
 | `test_verify.py` | all checks in `tblab verify` pass |
 
-As a sanity check on the tests themselves, I injected seven deliberate bugs one at a time (a
-wrong graphene hopping, swapped SSH `v/w`, dropped Haldane phase, flipped Chern sign, a wrong
-tetrahedron cumulative, a sign error in the Kronig-Penney formula, a wrong factor in the Dirac
-velocity); the suite failed for each of them.
+As a check on the tests themselves, the independent review described in
+[How this was built](#how-this-was-built) applied deliberate bugs (mutations) to the code one at a
+time and ran the suite against each; the mutations it did not catch are listed in
+[`CHANGELOG.md`](CHANGELOG.md) together with the tests added for them.
 
 ## Conventions
 
@@ -280,9 +283,9 @@ bash scripts/make_docs.sh      # regenerates everything under docs/ (about 20 s)
 
 ## Limitations (please read)
 
-- **This is a teaching implementation, not a replacement for Wannier90, VASP or any production
-  code.** There is no first-principles input, no Wannier interpolation, no spin, spin-orbit
-  coupling, interactions or self-consistency. The models are hand-written with free hopping
+- **This is a teaching implementation, not a replacement for Wannier90 or any production
+  electronic-structure code.** There is no first-principles input, no Wannier interpolation, no
+  spin, spin-orbit coupling, interactions or self-consistency. The models are hand-written with free hopping
   parameters; nothing is fitted to a real material, and the numbers (`t`, `a`) used in examples
   are not claims about graphene.
 - DOS: only 1D (segments) and 2D (triangles) linear interpolation; no 3D tetrahedra, no symmetry
@@ -292,13 +295,8 @@ bash scripts/make_docs.sh      # regenerates everything under docs/ (about 20 s)
   curvature. There is no multi-band (non-Abelian) or Wilson-loop flow implementation.
 - Kronig-Penney band edges are found by scanning the energy axis. Bands narrower than about the
   scan step are caught via local minima of `|f|`, but bandwidths below double-precision resolution
-  (e.g. `1e-10` for very thick barriers) are not resolved (found while writing the tight-binding-limit
-  test). The plane-wave solver converges only algebraically for a discontinuous potential.
-- Verification status: the full test-suite and CLI examples were run on **Python 3.13.17 with
-  numpy 2.5.3, scipy 1.18.1 and matplotlib 3.11.2**. The CI workflow targets Python 3.10, 3.11 and 3.12 (and
-  the declared lower bounds `numpy>=1.23`, `scipy>=1.9`, `matplotlib>=3.6` follow the APIs used), but I could not run
-  those versions locally (only a syntax check on 3.11/3.12), and the GitHub Actions workflow has not been executed
-  yet. `mypy` is clean on the sources with `--python-version 3.13`.
+  (e.g. `1e-10` for very thick barriers) are not resolved. The plane-wave solver converges only
+  algebraically for a discontinuous potential.
 - No performance benchmarks are claimed. Large DOS grids (e.g. `--nk 300` for graphene) take
   seconds to tens of seconds in pure NumPy.
 - The plots are static PNGs; there is no interactive viewer.
@@ -307,6 +305,17 @@ bash scripts/make_docs.sh      # regenerates everything under docs/ (about 20 s)
 
 MIT, see [`LICENSE`](LICENSE). Copyright (c) 2026 Georgii Baiev.
 
-## Development note
+## How this was built
 
-Developed with AI assistance.
+I chose the models and the rules for checking them: every headline number is compared with an
+analytic limit or a closed-form result, important results are reproduced by a second, independent
+method, and the test suite itself is checked by deliberately breaking the code (mutation checks).
+The first implementation was written with an AI coding assistant (Claude). An independent review
+by a second model (Claude Fable 5.2) re-derived the main results with its own code and found the
+problems listed in [`CHANGELOG.md`](CHANGELOG.md): checks that compared a formula with itself,
+README numbers that did not match their stated configuration, a Chern number reported for a
+gapless band, and mutations the tests did not catch. Version 0.2, also written with the
+assistant, fixes them. The extensions in [`docs/ROADMAP.md`](docs/ROADMAP.md) are mine to
+implement.
+
+Commits made with the assistant carry a `Co-Authored-By` line.
