@@ -24,6 +24,7 @@ from .dos import dos_gaussian, dos_tetrahedron, integrate
 from .kronig_penney import KronigPenney
 from .models import MODELS, SSH, BlochModel, Chain, Graphene, Haldane, Square, make_model
 from .plotting import fig_bands, fig_berry, fig_dos, fig_kp, fig_phase, fig_ssh
+from .realspace import DEFAULT_CELLS, max_band_difference
 from .ssh import ssh_edge_modes, ssh_spectrum_sweep
 from .topology import chern_number, ssh_winding_number, zak_phase
 from .verify import format_table, run_checks
@@ -130,7 +131,12 @@ def cmd_bands(args: argparse.Namespace) -> int:
         "tick_positions": res.path.tick_x,
         "band_min": res.energies.min(),
         "band_max": res.energies.max(),
+        # closed form, where one exists that is not the Hamiltonian itself (None otherwise)
         "max_abs_error_vs_analytic": res.max_abs_error,
+        "real_space_check": {
+            "cells_per_direction": DEFAULT_CELLS[model.name],
+            "max_abs_difference": max_band_difference(model),
+        },
     }
     if model.norb == 2 and model.dim == 2:
         gaps = {

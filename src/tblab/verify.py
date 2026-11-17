@@ -13,11 +13,11 @@ import numpy as np
 
 from . import analytic as an
 from .analysis import dirac_velocity, direct_gap
-from .bands import compute_bands
-from .dos import dos_tetrahedron, uniform_grid
+from .dos import dos_tetrahedron
 from .kpath import brillouin_zone_polygon, polygon_area
 from .kronig_penney import KronigPenney
 from .models import SSH, Chain, Graphene, Haldane, Square
+from .realspace import DEFAULT_CELLS, max_band_difference
 from .ssh import ssh_edge_modes
 from .topology import chern_number, zak_phase
 
@@ -42,18 +42,24 @@ def _row(name: str, analytic: float, numeric: float, tol: float, kind: str = "ab
 def run_checks() -> list[Check]:
     rows: list[Check] = []
 
-    # 1. chain dispersion
-    r = compute_bands(Chain(t=1.3), "G-X", 200)
-    ref = an.chain_energy(r.path.kfrac[:, 0] * 2.0 * math.pi, t=1.3)
-    rows.append(
-        _row(
-            "chain: max |E(k) + 2t cos k|", 0.0, float(np.abs(r.energies[:, 0] - ref).max()), 1e-12
+    # 1. Bloch bands vs the spectrum of a finite periodic lattice built in real space
+    for label, model in (
+        ("chain (t2 = 0.25)", Chain(t=1.3, eps=0.2, t2=0.25)),
+        ("square (t2 = 0.2)", Square(t=0.7, t2=0.2)),
+        ("SSH (v = 0.4, w = 1.1)", SSH(v=0.4, w=1.1)),
+        ("graphene (m = 0.3)", Graphene(mass=0.3)),
+        ("Haldane (phi = 0.7, M = 0.3)", Haldane(t2=0.12, phi=0.7, mass=0.3)),
+    ):
+        n = DEFAULT_CELLS[model.name]
+        cells = f"{n} cells" if model.dim == 1 else f"{n}x{n} cells"
+        rows.append(
+            _row(
+                f"{label}: Bloch vs real space, {cells}",
+                0.0,
+                max_band_difference(model, n),
+                1e-12,
+            )
         )
-    )
-
-    # 2. square lattice bandwidth
-    e = Square(t=0.7).energies(uniform_grid(Square(t=0.7), 40))
-    rows.append(_row("square: bandwidth 8t", 8 * 0.7, float(e.max() - e.min()), 1e-12))
 
     # 3. graphene Dirac velocity
     g = Graphene(t=2.7, a=1.42)

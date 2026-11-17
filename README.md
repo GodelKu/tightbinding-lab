@@ -8,9 +8,10 @@ introductory solid-state course: band structures along high-symmetry paths, dens
 curvature and Chern numbers (Haldane model), and the Kronig-Penney model.
 
 The point of the project is not the models themselves (they are textbook) but that **every
-headline claim is tested against a closed-form result**: `E(k) = -2t cos k`, the Dirac velocity
-`3ta/2`, `C = ±1` in the topological Haldane phase, zero-energy SSH edge modes, the analytic
-Kronig-Penney condition, and so on. All numbers and figures below were produced by running the
+headline claim is tested against a closed-form result or an independent method**: the Bloch bands
+against a finite lattice built in real space, the Dirac velocity `3ta/2`, `C = ±1` in the
+topological Haldane phase, zero-energy SSH edge modes, the analytic Kronig-Penney condition, and
+so on. All numbers and figures below were produced by running the
 code in this repository (see [Reproducing the figures](#reproducing-the-figures)).
 
 Author: Georgii Baiev. MIT licence. How the code was written and reviewed is described in
@@ -85,12 +86,21 @@ print(dirac_velocity(Graphene(), "K"))  # 1.49999999...  (= 3ta/2)
 
 ### Band structures (chain, square lattice, graphene, SSH, Haldane)
 
-Models are Bloch Hamiltonians `H(k)` built from hopping lists; bands are `numpy.linalg.eigh`
-along a path whose points are spaced proportionally to Cartesian length. Brillouin zones are
-constructed as Voronoi cells of the reciprocal lattice.
+The Bloch Hamiltonians `H(k)` are written in closed form for the chain, the square lattice, SSH
+and graphene; the Haldane next-nearest-neighbour term is summed from a list of hops whose
+chirality is computed from the geometry. Bands are `numpy.linalg.eigh` along a path whose points
+are spaced proportionally to Cartesian length. Brillouin zones are constructed as Voronoi cells of
+the reciprocal lattice.
 
-- 1D chain: `max |E_numeric(k) + 2t cos(ka)|` is 0.0 in the default CLI run and below 1e-13 in the
-  tests (random `t, a, eps`, plus a next-nearest-neighbour term).
+- Every model is checked against an independent construction (`tblab.realspace`): a ring or
+  torus of unit cells whose Hamiltonian is written in real space as a list of bonds (graphene and
+  Haldane bonds are found from the site positions, the Haldane phases by walking each hexagon
+  counter-clockwise). Its eigenvalues must equal the Bloch energies at the commensurate wave
+  vectors; `tblab bands` reports the largest difference as `real_space_check`. For the one-band
+  chain and square lattice this is the only meaningful check: their `H(k)` is the closed form
+  itself, so they have no separate "analytic" curve. A torus contains `k` and `-k` together, so
+  this check cannot see the sign of the Haldane flux `φ`; that sign is checked by the Chern
+  number and the curvature.
 - Graphene (`a` = C-C distance, lattice constant `√3 a`): bands equal `±|f(k)|` to 1e-15; bandwidth
   `6t`; `E(M) = ±t`; gap at `K` and `K'` is zero to 1e-15; sublattice mass `m` gives gap `2|m|`.
 - Dirac velocity from the numerical bands: `1.4999999981` for `t = a = 1` versus analytic
@@ -223,7 +233,8 @@ ruff check .
 
 | file | what is compared with what |
 | --- | --- |
-| `test_chain_square.py` | `E = ε - 2t cos ka` over random `t, a, ε`; effective mass `t a²` at the band bottom by finite difference; square lattice `-2t(cos kx + cos ky)`, `E(Γ,X,M) = -4t, 0, +4t` |
+| `test_chain_square.py` | Bloch bands vs real-space rings and tori (with second-neighbour hopping); the ring spectrum vs `ε - 2t cos(2πm/n) - 2t2 cos(4πm/n)`; effective mass `t a²` at the band bottom by finite difference; `E(Γ,X,M) = -4t, 0, +4t` |
+| `test_realspace.py` | SSH, graphene and Haldane Bloch bands vs real-space supercells; coordination numbers; sensitivity to `φ` (and blindness to `φ → -φ`) |
 | `test_graphene.py` | bands vs `±\|f(k)\|`; particle-hole symmetry; `E(Γ) = ±3t`, `E(M) = ±t`; gap 0 at K/K'; Dirac velocity `3ta/2` for 3 parameter sets × 2 valleys × 5 directions; `dq²` convergence; slope fit along K→Γ; numerically located Dirac points; gap `2m` with a sublattice mass |
 | `test_ssh.py` | bulk `±\|v + w e^{-ik}\|`, gap `2\|v-w\|`; chiral symmetry of the open chain; two zero modes iff `w > v` with `\|E\| ≲ w (v/w)^N`; analytic zero mode `(-v/w)^n` inside the numerical zero-mode subspace; fitted decay ratio; sublattice/edge localisation; Zak phase 0/π, winding number, gauge invariance |
 | `test_haldane.py` | Hermiticity and exact periodicity `H(k+G) = H(k)`; reduces to graphene at `t2 = 0`; closed-form bands; valley gaps `2\|M ∓ 3√3 t2 sin φ\|`; `C = ±1` / `0`; sign under `φ → -φ`; independence of grid size and origin; gauge invariance of the plaquette product; FHS curvature vs the `d`-vector formula; scan over `(φ, M)` against the analytic boundary |
@@ -266,6 +277,7 @@ src/tblab/
   kronig_penney.py   analytic condition + plane-wave solver
   analysis.py        Dirac velocity, Dirac-point search
   analytic.py        closed-form reference formulas (no diagonalisation)
+  realspace.py       finite periodic lattices built from bond lists (independent check)
   verify.py          `tblab verify` table
   plotting.py        matplotlib figures (OO API, headless-safe)
   cli.py             `tblab` command

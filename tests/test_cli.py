@@ -23,6 +23,7 @@ def test_bands_graphene_saves_png_and_json(tmp_path, capsys):
     assert d["command"] == "bands" and d["model"] == "graphene"
     assert d["results"]["labels"] == ["G", "K", "M", "G"]
     assert d["results"]["max_abs_error_vs_analytic"] < 1e-12
+    assert d["results"]["real_space_check"]["max_abs_difference"] < 1e-12
     assert d["results"]["fermi_velocity_numeric"] == pytest.approx(1.5, rel=1e-6)
     assert len(d["results"]["dirac_points_found_fractional"]) == 2
     assert len(d["energies"]) == len(d["k_distance"]) > 100
@@ -64,7 +65,9 @@ def test_bands_parameters_are_passed_through(tmp_path):
 def test_bands_all_models(tmp_path, model, extra):
     assert main(["bands", model, "--out", str(tmp_path), "--nk", "80", *extra]) == 0
     assert _png_ok(tmp_path / f"{model}_bands.png")
-    assert json.loads((tmp_path / f"{model}_bands.json").read_text())["model"] == model
+    d = json.loads((tmp_path / f"{model}_bands.json").read_text())
+    assert d["model"] == model
+    assert d["results"]["real_space_check"]["max_abs_difference"] < 1e-12
 
 
 def test_bands_ssh_json_has_gap(tmp_path):

@@ -1,7 +1,9 @@
 """Closed-form reference results used to check the numerics.
 
 None of these functions diagonalise a matrix; they are the textbook formulas the numerical code is
-tested against.
+tested against. The dispersions of the chain and the square lattice are not here: the Bloch
+Hamiltonians of those one-band models *are* the closed forms, so comparing the two would test
+nothing. They are checked against finite real-space lattices instead (:mod:`tblab.realspace`).
 """
 
 from __future__ import annotations
@@ -13,25 +15,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.special import ellipk
 
-from .models import (
-    SSH,
-    BlochModel,
-    Chain,
-    Graphene,
-    Haldane,
-    Square,
-    _hex_geometry,
-)
+from .models import SSH, BlochModel, Graphene, Haldane, _hex_geometry
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
 # ---- 1D chain ------------------------------------------------------------------------------
-def chain_energy(k: Any, t: float = 1.0, a: float = 1.0, eps: float = 0.0) -> FloatArray:
-    """``E(k) = ε - 2 t cos(k a)``."""
-    return np.asarray(eps - 2.0 * t * np.cos(np.asarray(k, dtype=float) * a), dtype=float)
-
-
 def chain_dos(e: Any, t: float = 1.0) -> FloatArray:
     """DOS per site: ``1 / (π sqrt(4t² - E²))`` inside the band, 0 outside."""
     e = np.asarray(e, dtype=float)
@@ -48,13 +37,6 @@ def chain_cumulative_dos(e: Any, t: float = 1.0) -> FloatArray:
 
 
 # ---- square lattice ------------------------------------------------------------------------
-def square_energy(kx: Any, ky: Any, t: float = 1.0, a: float = 1.0) -> FloatArray:
-    """``E = -2t (cos kx a + cos ky a)``."""
-    return np.asarray(
-        -2.0 * t * (np.cos(np.asarray(kx) * a) + np.cos(np.asarray(ky) * a)), dtype=float
-    )
-
-
 def square_dos(e: Any, t: float = 1.0) -> FloatArray:
     """Nearest-neighbour square-lattice DOS per site, ``K(√(1-(E/4t)²)) / (2π² t)``.
 
@@ -167,15 +149,11 @@ HALDANE_SIGN = -1.0  # fixed by comparing with the Hamiltonian; see tests/test_h
 
 
 def reference_bands(model: BlochModel, kfrac: Any) -> FloatArray | None:
-    """Analytic bands for ``model`` at fractional ``kfrac`` or ``None`` if no formula is stored."""
+    """Closed-form bands of a two-band model at fractional ``kfrac``, else ``None``.
+
+    Chain and square lattice return ``None`` on purpose (see the module docstring).
+    """
     kfrac = np.asarray(kfrac, dtype=float)
-    if isinstance(model, Chain) and model.t2 == 0.0:
-        return chain_energy(kfrac[..., 0] * 2.0 * math.pi / model.a, model.t, model.a, model.eps)[
-            ..., None
-        ]
-    if isinstance(model, Square) and model.t2 == 0.0:
-        kc = model.cart(kfrac)
-        return (square_energy(kc[..., 0], kc[..., 1], model.t, model.a) + model.eps)[..., None]
     if isinstance(model, SSH):
         return ssh_energy(model, kfrac)
     if isinstance(model, Graphene):

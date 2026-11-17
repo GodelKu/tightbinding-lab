@@ -1,3 +1,11 @@
+"""Chain and square lattice.
+
+Their Bloch Hamiltonians are the closed forms ``ε - 2t cos ka - 2t2 cos 2ka`` and
+``ε - 2t(cos kx a + cos ky a) - 4 t2 cos kx a cos ky a``, so the dispersion is checked against an
+independent construction: the spectrum of a ring or torus of sites built from its bonds
+(``tblab.realspace``), which must equal the Bloch energies at the commensurate wave vectors.
+"""
+
 import math
 
 import numpy as np
@@ -6,14 +14,24 @@ import pytest
 from tblab.bands import compute_bands
 from tblab.dos import uniform_grid
 from tblab.models import Chain, Square, make_model
+from tblab.realspace import bloch_spectrum, chain_ring, max_band_difference, square_torus
 
 
-@pytest.mark.parametrize("t,a,eps", [(1.0, 1.0, 0.0), (0.8, 2.5, 0.3), (2.7, 1.42, -1.0)])
-def test_chain_dispersion_matches_minus_2t_cos_ka(t, a, eps):
-    chain = Chain(t=t, a=a, eps=eps)
-    k = np.linspace(-math.pi / a, math.pi / a, 401)
-    numeric = chain.energies(k[:, None] * a / (2 * math.pi))[:, 0]
-    assert numeric == pytest.approx(eps - 2 * t * np.cos(k * a), abs=1e-13)
+@pytest.mark.parametrize(
+    "t,a,eps,t2", [(1.0, 1.0, 0.0, 0.0), (0.8, 2.5, 0.3, 0.0), (2.7, 1.42, -1.0, 0.4)]
+)
+@pytest.mark.parametrize("n", [5, 16, 61])
+def test_chain_bands_equal_ring_spectrum(t, a, eps, t2, n):
+    assert max_band_difference(Chain(t=t, a=a, eps=eps, t2=t2), n) < 1e-12
+
+
+def test_ring_spectrum_is_minus_2t_cos_without_any_bloch_code():
+    """The ring's eigenvalues are ε - 2t cos(2πm/n) - 2 t2 cos(4πm/n), m = 0..n-1."""
+    n, t, eps, t2 = 24, 1.3, 0.2, 0.25
+    m = np.arange(n)
+    expected = eps - 2 * t * np.cos(2 * math.pi * m / n) - 2 * t2 * np.cos(4 * math.pi * m / n)
+    ring = np.linalg.eigvalsh(chain_ring(n, t, eps, t2))
+    assert ring == pytest.approx(np.sort(expected), abs=1e-12)
 
 
 def test_chain_band_edges_and_effective_mass():
@@ -27,26 +45,16 @@ def test_chain_band_edges_and_effective_mass():
     assert (e + 2 * t) / dk**2 == pytest.approx(t * a * a, rel=1e-5)
 
 
-def test_chain_second_neighbour_term():
-    chain = Chain(t=1.0, t2=0.25)
-    k = np.linspace(0, math.pi, 50)
-    e = chain.energies(k[:, None] / (2 * math.pi))[:, 0]
-    assert e == pytest.approx(-2 * np.cos(k) - 0.5 * np.cos(2 * k), abs=1e-13)
+@pytest.mark.parametrize("t,a,eps,t2", [(1.0, 1.0, 0.0, 0.0), (0.9, 1.7, -0.3, 0.2)])
+@pytest.mark.parametrize("n", [3, 10, 17])
+def test_square_bands_equal_torus_spectrum(t, a, eps, t2, n):
+    assert max_band_difference(Square(t=t, a=a, eps=eps, t2=t2), n) < 1e-12
 
 
-def test_compute_bands_chain_reports_zero_analytic_error():
-    res = compute_bands(Chain(), "G-X", 100)
-    assert res.max_abs_error is not None and res.max_abs_error < 1e-13
-    assert res.energies.shape[1] == 1
-
-
-def test_square_dispersion_random_k():
-    rng = np.random.default_rng(1)
-    sq = Square(t=0.9, a=1.7)
-    kf = rng.random((200, 2))
-    kc = sq.cart(kf)
-    expected = -2 * 0.9 * (np.cos(kc[:, 0] * 1.7) + np.cos(kc[:, 1] * 1.7))
-    assert sq.energies(kf)[:, 0] == pytest.approx(expected, abs=1e-13)
+def test_square_torus_detects_a_wrong_diagonal_hopping():
+    """The comparison is sensitive: the torus with t2 does not match the Bloch bands without."""
+    torus = np.linalg.eigvalsh(square_torus(12, 1.0, 0.0, 0.2))
+    assert np.abs(torus - bloch_spectrum(Square(t=1.0, t2=0.0), 12)).max() > 0.1
 
 
 def test_square_special_point_energies():
@@ -65,9 +73,11 @@ def test_square_second_neighbour_term():
     assert sq.energies(np.array([0.0, 0.0]))[0] == pytest.approx(-4.0 - 4 * 0.2)
 
 
-def test_reference_none_when_t2_present():
-    res = compute_bands(Square(t2=0.1), "G-X-M-G", 60)
-    assert res.analytic is None and res.max_abs_error is None
+def test_one_band_models_have_no_closed_form_reference():
+    """Comparing H(k) of a one-band model with the formula it is built from tests nothing."""
+    for model in (Chain(), Square(), Square(t2=0.1)):
+        res = compute_bands(model, model.default_path, 60)
+        assert res.analytic is None and res.max_abs_error is None
 
 
 def test_make_model_ignores_unknown_and_none():
