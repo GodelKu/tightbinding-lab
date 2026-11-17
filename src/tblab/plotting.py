@@ -298,13 +298,15 @@ def fig_berry(model: BlochModel, res: BerryResult, title: str) -> Figure:
                 fontsize=9,
             )
     assert mesh is not None
-    fig.colorbar(mesh, ax=ax, label=r"$\Omega_z(\mathbf{k})$  (lower band)")
+    fig.colorbar(
+        mesh, ax=ax, label=r"$\Omega_z(\mathbf{k})$  [length$^2$], lower band, periodic gauge"
+    )
     ax.set_aspect("equal")
     lim = 1.1 * np.abs(poly).max()
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
-    ax.set_xlabel("$k_x$")
-    ax.set_ylabel("$k_y$")
+    ax.set_xlabel("$k_x$  [1/length]")
+    ax.set_ylabel("$k_y$  [1/length]")
     ax.set_title(title)
     return fig
 

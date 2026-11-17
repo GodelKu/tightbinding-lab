@@ -191,3 +191,47 @@ def berry_curvature_two_band(model: BlochModel, kfrac: FloatArray, h: float = 1e
     dy = (dhat(kc + ey) - dhat(kc - ey)) / (2.0 * h)
     d0 = dhat(kc)
     return np.asarray(0.5 * np.einsum("...i,...i->...", d0, np.cross(dx, dy)), dtype=float)
+
+
+def berry_curvature_kubo(
+    model: BlochModel,
+    kfrac: FloatArray,
+    band: int = 0,
+    orbital_positions: FloatArray | None = None,
+    dk: float = 1e-6,
+) -> FloatArray:
+    """Berry curvature of one band from the Kubo formula.
+
+    ``Ω_n = -2 Im Σ_{m≠n} ⟨n|∂x H|m⟩⟨m|∂y H|n⟩ / (E_n - E_m)²``, with ``∂H`` from central
+    differences of ``H(k)`` (Cartesian step ``dk``). Same convention as :func:`chern_number`
+    (``A = i⟨u|∇u⟩``, ``Ω = ∂x A_y - ∂y A_x``) but no link variables, and the result does not
+    depend on the phases of the eigenvectors: an independent route to ``Ω`` and ``C``.
+
+    By default ``H(k)`` is taken in the periodic gauge of :mod:`tblab.models`. With
+    ``orbital_positions`` (Cartesian, shape ``(norb, 2)``) the Bloch basis includes the position
+    ``τ_α`` of each orbital, ``H -> U H U†`` with ``U = diag(e^{-ik·τ_α})`` (the "atomic"
+    convention, whose curvature is the one that enters semiclassical dynamics). The two maps
+    differ pointwise; their integrals over the zone, the Chern number, agree.
+    """
+    if model.dim != 2:
+        raise ValueError("needs a 2D model")
+    kc = model.cart(kfrac)
+    tau = None if orbital_positions is None else np.asarray(orbital_positions, dtype=float)
+
+    def ham(k: FloatArray) -> ComplexArray:
+        h = model.hamiltonian(k)
+        if tau is not None:
+            u = np.exp(-1j * (k @ tau.T))  # (..., norb)
+            h = u[..., :, None] * h * np.conj(u)[..., None, :]
+        return np.asarray(h, dtype=complex)
+
+    e, vec = np.linalg.eigh(ham(kc))
+    ex, ey = np.array([dk, 0.0]), np.array([0.0, dk])
+    hx = (ham(kc + ex) - ham(kc - ex)) / (2.0 * dk)
+    hy = (ham(kc + ey) - ham(kc - ey)) / (2.0 * dk)
+    vx = np.einsum("...ia,...ij,...jb->...ab", vec.conj(), hx, vec)
+    vy = np.einsum("...ia,...ij,...jb->...ab", vec.conj(), hy, vec)
+    de = e[..., band, None] - e
+    de[..., band] = np.inf
+    terms = vx[..., band, :] * vy[..., :, band] / de**2
+    return np.asarray(-2.0 * np.imag(terms.sum(axis=-1)), dtype=float)

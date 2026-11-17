@@ -302,6 +302,10 @@ def cmd_berry(args: argparse.Namespace) -> int:
         "check_chern_number_raw_sum": check.chern,
         "check_min_direct_gap_on_grid": check.min_gap,
         "sign_convention": "A = i<u|grad u>, Omega = dAy/dx - dAx/dy, C = (1/2pi) integral Omega",
+        "gauge": (
+            "periodic (orbital positions inside the cell ignored): the curvature map depends on "
+            "this choice, the Chern number does not"
+        ),
     }
     if isinstance(model, Haldane):
         results["critical_mass_3sqrt3_t2_sin_phi"] = an.haldane_critical_mass(model.t2, model.phi)

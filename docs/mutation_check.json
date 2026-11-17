@@ -1,0 +1,228 @@
+{
+  "mutations": 37,
+  "caught": 37,
+  "results": [
+    {
+      "name": "graphene hop phase e^{-ik.a2} -> e^{+ik.a2}",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_bands_graphene_saves_png_and_json"
+    },
+    {
+      "name": "Haldane chirality sign flipped",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_gapped_models_pass_both_checks"
+    },
+    {
+      "name": "Haldane B sublattice gets the chirality of A",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_gapped_models_pass_both_checks"
+    },
+    {
+      "name": "Chern plaquette flux sign",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_gapped_models_pass_both_checks"
+    },
+    {
+      "name": "Chern plaquette missing a conjugate",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_gapped_models_pass_both_checks"
+    },
+    {
+      "name": "Berry curvature area factor 2",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_haldane.py::test_fhs_curvature_matches_independent_d_vector_formula"
+    },
+    {
+      "name": "Berry (Zak) phase sign",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_ssh.py::test_berry_phase_sign_against_rice_mele_continuum_formula[0.5-1.0-0.3]"
+    },
+    {
+      "name": "d-vector curvature sign",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_haldane.py::test_fhs_curvature_matches_independent_d_vector_formula"
+    },
+    {
+      "name": "winding number k -> -k",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_ssh.py::test_zak_phase_quantised_and_matches_winding[0.5-1.0]"
+    },
+    {
+      "name": "2D triangles: second triangle of each cell replaced by the first",
+      "file": "src/tblab/dos.py",
+      "caught": true,
+      "first_failing_test": "tests/test_dos.py::test_triangle_dos_converges_at_second_order_for_a_band_without_symmetry"
+    },
+    {
+      "name": "triangle cumulative: wrong denominator in the upper branch",
+      "file": "src/tblab/dos.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_dos_square_json_normalised_and_close_to_analytic"
+    },
+    {
+      "name": "Gaussian normalisation sqrt(2 pi) -> sqrt(pi)",
+      "file": "src/tblab/dos.py",
+      "caught": true,
+      "first_failing_test": "tests/test_dos.py::test_square_dos_matches_elliptic_integral"
+    },
+    {
+      "name": "Gaussian exponent -1/2 -> -1",
+      "file": "src/tblab/dos.py",
+      "caught": true,
+      "first_failing_test": "tests/test_dos.py::test_square_dos_matches_elliptic_integral"
+    },
+    {
+      "name": "Dirac velocity without the +-q average",
+      "file": "src/tblab/analysis.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_bands_graphene_saves_png_and_json"
+    },
+    {
+      "name": "open SSH chain: intracell hopping v replaced by w (except in the last cell)",
+      "file": "src/tblab/ssh.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_ssh_command"
+    },
+    {
+      "name": "SSH decay ratio fitted on the B sublattice",
+      "file": "src/tblab/ssh.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_ssh_command"
+    },
+    {
+      "name": "SSH Bloch Hamiltonian w e^{-ik} -> w e^{-2ik}",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_bands_all_models[ssh-extra2]"
+    },
+    {
+      "name": "Kronig-Penney: sign of the second term",
+      "file": "src/tblab/kronig_penney.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_kp_command"
+    },
+    {
+      "name": "Kronig-Penney: plane-wave V_0 uses the well width",
+      "file": "src/tblab/kronig_penney.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_kp_command"
+    },
+    {
+      "name": "Kronig-Penney: kinetic energy k^2/2 -> k^2",
+      "file": "src/tblab/kronig_penney.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_kp_command"
+    },
+    {
+      "name": "hexagonal M point moved to (1/2, 0)",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_kpath.py::test_graphene_path_segment_lengths_match_geometry"
+    },
+    {
+      "name": "K and K' labels swapped",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_verify_command_exit_code_and_json"
+    },
+    {
+      "name": "square lattice: diagonal term 4 t2 -> 2 t2",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chain_square.py::test_square_bands_equal_torus_spectrum[3-0.9-1.7--0.3-0.2]"
+    },
+    {
+      "name": "chain: second-neighbour term cos 2k -> cos 3k",
+      "file": "src/tblab/models.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chain_square.py::test_chain_bands_equal_ring_spectrum[16-2.7-1.42--1.0-0.4]"
+    },
+    {
+      "name": "Haldane phase boundary 3 sqrt(3) -> 3",
+      "file": "src/tblab/analytic.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_too_coarse_grid_near_the_transition_is_refused"
+    },
+    {
+      "name": "phase diagram: M axis not scaled by t2",
+      "file": "src/tblab/cli.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_phase_diagram_axes_against_hand_values"
+    },
+    {
+      "name": "dos command compares the reference with itself",
+      "file": "src/tblab/cli.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_dos_square_json_normalised_and_close_to_analytic"
+    },
+    {
+      "name": "verify: every check passes",
+      "file": "src/tblab/verify.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_verify_row_can_fail"
+    },
+    {
+      "name": "band result: max_abs_error always 0",
+      "file": "src/tblab/bands.py",
+      "caught": true,
+      "first_failing_test": "tests/test_graphene.py::test_max_abs_error_measures_a_wrong_reference"
+    },
+    {
+      "name": "Dirac-point search accepts any local minimum",
+      "file": "src/tblab/analysis.py",
+      "caught": true,
+      "first_failing_test": "tests/test_graphene.py::test_sublattice_mass_opens_gap_2m"
+    },
+    {
+      "name": "real-space ring: second neighbour at distance 3",
+      "file": "src/tblab/realspace.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chain_square.py::test_chain_bands_equal_ring_spectrum[16-2.7-1.42--1.0-0.4]"
+    },
+    {
+      "name": "real-space torus: both diagonals along (1, 1)",
+      "file": "src/tblab/realspace.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chain_square.py::test_square_bands_equal_torus_spectrum[3-0.9-1.7--0.3-0.2]"
+    },
+    {
+      "name": "real-space Haldane: hop to the opposite corner of the hexagon",
+      "file": "src/tblab/realspace.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_bands_all_models[haldane-extra3]"
+    },
+    {
+      "name": "Chern number: gap check disabled",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_gapless_graphene_is_refused_when_the_dirac_points_are_grid_nodes"
+    },
+    {
+      "name": "Chern number: refinement check disabled",
+      "file": "src/tblab/topology.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_gapless_graphene_between_grid_points_is_caught_by_refinement"
+    },
+    {
+      "name": "berry command: analytic gap check disabled",
+      "file": "src/tblab/cli.py",
+      "caught": true,
+      "first_failing_test": "tests/test_chern_guard.py::test_cli_refuses_gapless_graphene"
+    },
+    {
+      "name": "SSH edge splitting without the factor 1 - (v/w)^2",
+      "file": "src/tblab/analytic.py",
+      "caught": true,
+      "first_failing_test": "tests/test_cli.py::test_verify_command_exit_code_and_json"
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "dos": {
+    "square": {
+      "nk": 200,
+      "window": [
+        0.3,
+        3.7
+      ],
+      "sigma": 0.04,
+      "tetrahedron_max_rel_dev": 0.0011486011040562837,
+      "gaussian_max_rel_dev": 0.002350539439477919
+    },
+    "chain_cumulative": [
+      {
+        "nk": 750,
+        "max_dev": 5.425869646680237e-05
+      },
+      {
+        "nk": 1500,
+        "max_dev": 1.3867397170685969e-05
+      },
+      {
+        "nk": 3000,
+        "max_dev": 3.5460698342149044e-06
+      }
+    ],
+    "graphene_integral": {
+      "nk": 48,
+      "integral": 1.9999999999999574,
+      "error": 4.263256414560601e-14
+    },
+    "graphene_linear": {
+      "nk": 240,
+      "window": [
+        0.05,
+        0.3
+      ],
+      "max_rel_dev": 0.030420828108058684,
+      "ratio_at_0.3_tetrahedron": 1.030943085886891,
+      "histogram_points": 9000000,
+      "ratio_at_0.3_histogram": 1.0326564380373473
+    },
+    "graphene_van_hove": {
+      "nk": 240,
+      "abs_energy_of_peak": 1.0
+    }
+  },
+  "ssh": {
+    "v": 0.5,
+    "w": 1.0,
+    "n_cells": 40,
+    "edge_splitting_analytic": 6.821210263296962e-13,
+    "scale_w_(v/w)^N": 9.094947017729282e-13
+  },
+  "haldane": {
+    "t2": 0.1,
+    "phi": "pi/2",
+    "mass": 0.0,
+    "fhs_vs_d_vector": [
+      {
+        "nk": 60,
+        "max_dev": 0.029647702049198088,
+        "peak": 4.2315607667837565
+      },
+      {
+        "nk": 120,
+        "max_dev": 0.007831743063632768,
+        "peak": 4.243869592462412
+      },
+      {
+        "nk": 240,
+        "max_dev": 0.001967894964453265,
+        "peak": 4.260471596381246
+      }
+    ],
+    "kubo": {
+      "nk": 120,
+      "chern_periodic": -1.0000000000275482,
+      "chern_atomic": -1.000000000050577,
+      "max_map_difference": 0.6921705824900164,
+      "peak": 4.250775199793514
+    },
+    "phase_diagram_other_nk": [
+      {
+        "nk": 25,
+        "points": 3718,
+        "disagreeing": 16,
+        "max_distance_in_M": 0.0005699403978905448
+      },
+      {
+        "nk": 16,
+        "points": 3718,
+        "disagreeing": 40,
+        "max_distance_in_M": 0.00826040253176441
+      }
+    ]
+  },
+  "kronig_penney": {
+    "convergence": {
+      "v0": 20.0,
+      "well": 1.0,
+      "barrier": 0.3,
+      "bands": 4,
+      "rows": [
+        {
+          "n_plane_waves": 51,
+          "max_error": 0.0001370187376181775
+        },
+        {
+          "n_plane_waves": 101,
+          "max_error": 1.7115397191957982e-05
+        },
+        {
+          "n_plane_waves": 201,
+          "max_error": 2.0476459852147855e-06
+        },
+        {
+          "n_plane_waves": 401,
+          "max_error": 2.6038744493916965e-07
+        }
+      ]
+    },
+    "isolated_well": {
+      "v0": 100.0,
+      "well": 1.0,
+      "barrier": 0.8,
+      "band_centre_rel_error": 5.173851638415183e-11,
+      "bandwidth_over_level": 1.4691386296742018e-05
+    }
+  }
+}

@@ -11,8 +11,10 @@ The point of the project is not the models themselves (they are textbook) but th
 headline claim is tested against a closed-form result or an independent method**: the Bloch bands
 against a finite lattice built in real space, the Dirac velocity `3ta/2`, `C = ±1` in the
 topological Haldane phase, zero-energy SSH edge modes, the analytic Kronig-Penney condition, and
-so on. All numbers and figures below were produced by running the
-code in this repository (see [Reproducing the figures](#reproducing-the-figures)).
+so on. All numbers and figures below were produced by running the code in this repository:
+every measured number sits in a block that `tools/fill_readme.py` writes from the JSON files in
+`docs/`, and a test fails if README and JSON disagree (see
+[Reproducing the figures](#reproducing-the-figures)).
 
 Author: Georgii Baiev. MIT licence. How the code was written and reviewed is described in
 [How this was built](#how-this-was-built).
@@ -61,16 +63,19 @@ wrote docs/graphene_bands.json
 
 and the `results` block of that JSON file (abridged):
 
+<!-- BEGIN bands_example -->
 ```json
 {
   "labels": ["G", "K", "M", "G"],
   "max_abs_error_vs_analytic": 1.0e-15,
-  "direct_gap_at_special_points": {"G": 6.0, "K": 1.35e-15, "Kp": 8.0e-16, "M": 2.0},
+  "real_space_check": {"cells_per_direction": 12, "max_abs_difference": 9.3e-15},
+  "direct_gap_at_special_points": {"G": 6.0, "K": 1.35e-15, "Kp": 8.01e-16, "M": 2.0},
   "dirac_points_found_fractional": [[0.3333, 0.6667], [0.6667, 0.3333]],
   "fermi_velocity_numeric": 1.4999999981,
   "fermi_velocity_analytic_3ta/2": 1.5
 }
 ```
+<!-- END bands_example -->
 
 Path labels: `G` (also `Gamma`, `Γ`), `K`, `Kp` (also `K'`), `M`, `X`. Energies are in units of the
 hopping `t` unless you pass `--t` / `--unit`. The same functionality is available as a library:
@@ -79,7 +84,7 @@ hopping `t` unless you pass `--t` / `--unit`. The same functionality is availabl
 from tblab import Graphene, compute_bands, dirac_velocity
 
 res = compute_bands(Graphene(t=1.0, a=1.0), "G-K-M-G", nk=300)
-print(dirac_velocity(Graphene(), "K"))  # 1.49999999...  (= 3ta/2)
+print(dirac_velocity(Graphene(), "K"))  # close to 3ta/2 = 1.5
 ```
 
 ## What it computes, and how it is checked
@@ -101,12 +106,19 @@ the reciprocal lattice.
   itself, so they have no separate "analytic" curve. A torus contains `k` and `-k` together, so
   this check cannot see the sign of the Haldane flux `φ`; that sign is checked by the Chern
   number and the curvature.
-- Graphene (`a` = C-C distance, lattice constant `√3 a`): bands equal `±|f(k)|` to 1e-15; bandwidth
-  `6t`; `E(M) = ±t`; gap at `K` and `K'` is zero to 1e-15; sublattice mass `m` gives gap `2|m|`.
-- Dirac velocity from the numerical bands: `1.4999999981` for `t = a = 1` versus analytic
-  `3ta/2 = 1.5` (relative error 1.3e-9; the estimate averages `±q` because trigonal warping
-  makes the one-sided error O(q), and is verified to converge as `dq²`). Tests cover several `(t, a)`,
-  both valleys and five directions.
+- Graphene (`a` = C-C distance, lattice constant `√3 a`): bands vs the closed form `±|f(k)|`
+  written with the three bond vectors (atomic gauge, independent of the periodic-gauge `H(k)`);
+  bandwidth `6t`; `E(M) = ±t`; a sublattice mass `m` gives the gap `2|m|`. The Dirac velocity is
+  estimated from the numerical splitting at `K ± q`, averaged over `±q` because trigonal warping
+  makes the one-sided error `O(q)`; the tests check that the error falls as `dq²`, for several
+  `(t, a)`, both valleys and five directions.
+
+<!-- BEGIN bands -->
+- Largest difference between the real-space spectrum and the Bloch bands (from `tblab verify`): chain (t2 = 0.25) 3.1e-15; square (t2 = 0.2) 1.4e-14; SSH (v = 0.4, w = 1.1) 2.7e-15; graphene (m = 0.3) 9.1e-15; Haldane (phi = 0.7, M = 0.3) 1.6e-14.
+- Graphene (`t = a = 1`): bands equal `±|f(k)|` to 1.0e-15; the gap at K and K′ is 1.4e-15.
+- Dirac velocity from the numerical bands: `1.4999999981` against `3ta/2 = 1.5` (relative error 1.3e-9).
+<!-- END bands -->
+
 - `find_dirac_points` finds the gap minima numerically (grid scan + Nelder-Mead) and returns
   `(1/3, 2/3)` and `(2/3, 1/3)` without being told where they are; the default scan grid
   (61 × 61) does not contain K or K′, and the tests also use 50 and 71.
@@ -119,19 +131,21 @@ the reciprocal lattice.
 - **Linear tetrahedron method** (segments in 1D, triangles in 2D): each simplex is a linear
   interpolation of `E_n(k)`. The code evaluates the *exact cumulative distribution* of that
   interpolant at bin edges and differences it, so `∫ DOS dE` equals the band count to rounding
-  error (tested to 1e-10). Triangles with two or three corners at the same energy (for example a
+  error (table below). Triangles with two or three corners at the same energy (for example a
   corner exactly on the Dirac point) need no special case: the cumulative function stays well
   defined, while a pointwise formula divides by zero there (two equal corners) or has to represent
   a delta function (three equal corners).
 
-| check | result (measured) |
+<!-- BEGIN dos_table -->
+| check | result |
 | --- | --- |
-| square lattice, tetrahedron vs `K(√(1-(E/4t)²))/(2π² t)`, `0.3t<\|E\|<3.7t`, nk=200 | max relative deviation 0.31 % (test tolerance 1 %) |
-| square lattice, Gaussian σ=0.04, same window, nk=200 | max relative deviation 0.24 % (test tolerance 0.5 %) |
-| chain, cumulative DOS vs `1/2 + arcsin(E/2t)/π`, nk=1500 | max deviation 1.4e-5, shrinking ~1/nk² |
-| graphene, `∫ DOS dE` (both bands) | 2.0 (to 1e-10) |
-| graphene, tetrahedron DOS (nk=240) vs low-energy `2√3 \|E\| / (3π t²)`, `0.05t<\|E\|<0.3t` | max deviation 3.0 % (4.3 % up to `0.35t` in the CLI JSON); this is mostly a real deviation of NN graphene from the linear law (O(E²)), not numerical error |
-| graphene van Hove peak | at `\|E\| = t` (within 0.02) |
+| square lattice, tetrahedron vs `K(√(1-(E/4t)²))/(2π² t)`, `0.3t < \|E\| < 3.7t`, nk = 200 | max relative deviation 0.115 % |
+| square lattice, Gaussian σ = 0.04, same window, nk = 200 | max relative deviation 0.235 % |
+| chain, cumulative DOS vs `1/2 + arcsin(E/2t)/π` | max deviation 5.4e-5 (nk = 750), 1.4e-5 (nk = 1500), 3.5e-6 (nk = 3000) |
+| graphene, `∫ DOS dE` (both bands), nk = 48 | 2.000000000000 (error 4.3e-14) |
+| graphene, tetrahedron DOS (nk = 240) vs low-energy `2√3 \|E\| / (3π t²)`, `0.05t < \|E\| < 0.3t` | max deviation 3.0 %; at `E = 0.3t` the ratio to the linear law is 1.0309, and 1.0327 from a histogram of `\|f(k)\|` on 9,000,000 points, so the deviation is the band's curvature, not a numerical error |
+| graphene van Hove peak (nk = 240) | at `\|E\| = 1.00 t` |
+<!-- END dos_table -->
 
 ![Graphene DOS](docs/graphene_dos.png)
 
@@ -139,16 +153,19 @@ the reciprocal lattice.
 
 `H(k) = [[0, v + w e^{-ik}], [c.c., 0]]`, inversion-symmetric unit cell.
 
-- Open chain of 40 cells, `v = 0.5, w = 1`: the two states closest to zero have
-  `E = ±6.8e-13` (analytic scale `w (v/w)^N ≈ 1e-12`); the next level is at `0.503` against bulk
-  half-gap `|v-w| = 0.5`.
-- The edge mode on the left edge decays as `ψ_A(n+1)/ψ_A(n) = -v/w`; the fitted density decay
-  gives `|v/w| = 0.5000000000000111`. The test also checks that the analytic geometric-series state
-  lies in the span of the two numerical near-zero eigenvectors to 1e-9.
-- In the trivial phase (`v > w`) there are no in-gap states (`min|E| > 0.95 |v-w|`).
-- Zak phase of the lower band from a discretised Wilson loop: `|γ| = 3.141592653589793` for `w > v`,
-  `3e-16` for `w < v`; matches the winding number of `v + w e^{ik}` (0 or 1). The loop product is
-  verified to be invariant under random per-`k` gauge phases.
+<!-- BEGIN ssh -->
+- Open chain of 40 cells, `v = 0.5, w = 1.0`: the two states closest to zero have `E = -6.8205e-13` and `6.8219e-13`. To leading order the two edge states couple with `w (v/w)^N (1 - (v/w)²)` = `6.8212e-13` (the left state lives on A sites as `(-v/w)^n`, the right one on B sites; `H` applied to the right state leaves only `v (v/w)^(N-1)` on the first A site). The next level is at `0.5032` against the bulk half-gap `|v-w| = 0.5`.
+- The fitted decay of the edge density gives `|v/w| = 0.5000000000000111`.
+- Zak phase of the lower band from a discretised Wilson loop: `|γ| = 3.1415926535897927` for `w > v`, `3.3e-16` for `w < v`.
+<!-- END ssh -->
+
+- The left edge mode decays as `ψ_A(n+1)/ψ_A(n) = -v/w`; the tests check that this analytic
+  geometric series lies in the span of the two numerical near-zero eigenvectors.
+- In the trivial phase (`v > w`) there are no in-gap states.
+- The Zak phase is `π` exactly when the winding number of `v + w e^{ik}` is 1. The loop product is
+  invariant under random per-`k` phases of the eigenvectors (tested). With a staggered on-site
+  energy `±Δ` (Rice-Mele chain) the phase is no longer quantised; its sign is tested against a
+  continuum formula.
 
 ![SSH edge states](docs/ssh_edge.png)
 
@@ -160,39 +177,54 @@ number is computed with the Fukui-Hatsugai-Suzuki link-variable method on an `nk
 the Berry curvature is the plaquette flux per unit area.
 
 - A Chern number is only computed for a gapped band (see Limitations).
-- `t2 = 0.1, φ = π/2, M = 0`: `C = -1` (the raw plaquette sum is -1.0 to machine precision, no rounding
-  needed). In the tests the integer is unchanged for 25 to 50 points per direction and shifted grid origins.
-- `M = 0.8` (beyond `3√3 t2 = 0.5196`): `C = 0` to 1e-16.
-- `C(φ) = -C(-φ)`, `C(M) = C(-M)`.
-- Valley gaps are `2 |M ∓ 3√3 t2 sin φ|`, so the gap closes at `M = ±3√3 t2 sin φ`; verified to
-  1e-12 at several `(φ, M)`.
-- Independent cross-check of the Berry curvature: the `d`-vector formula `½ d̂·(∂x d̂ × ∂y d̂)`
-  (finite-difference derivatives) agrees with the plaquette fluxes with a maximum deviation of
-  `7.8e-3` against a peak of `4.25` at nk = 120 (the deviation falls ~1/nk²), including the sign.
-- Phase diagram on a 61 × 61 grid of `(φ, M/t2)`: of 3721 points, 3 sit exactly on a gap-closing
-  line (C undefined, excluded) and **0 of the remaining 3718 disagree** with the analytic boundary.
-  Caveat: `nk = 24` is divisible by 3, so `K` and `K'` are grid nodes, which makes the lattice
-  Chern number unusually robust near the boundary. With `--nk 25` (K not on the grid) 16 of the
-  3718 points disagree, all within `|ΔM| ≤ 5.7e-4` of the boundary (where the gap is ~1e-3, below the
-  grid resolution); with `--nk 16`, 40 points disagree, all within `|ΔM| ≤ 8.3e-3`. These are
-  resolution effects near the transition, as expected; the number is reported in the JSON output.
+- `C(φ) = -C(-φ)`, `C(M) = C(-M)`; the integer does not change with the grid size or a shifted
+  grid origin (tested).
+- Valley gaps are `2|M - 3√3 t2 sin φ|` at K and `2|M + 3√3 t2 sin φ|` at K′, so the gap closes at
+  `M = ±3√3 t2 sin φ`.
+- Two independent routes to the curvature: the `d`-vector formula `½ d̂·(∂x d̂ × ∂y d̂)` and the
+  Kubo formula `Ω₀ = -2 Im[⟨0|∂xH|1⟩⟨1|∂yH|0⟩]/(E₀ - E₁)²`. Neither uses link variables.
+
+<!-- BEGIN haldane -->
+- `t2 = 0.1, φ = π/2, M = 0`, nk = 100: raw plaquette sum `-1.0`, so `C = -1` (check grid nk = 201: `-1.0`).
+- `M = 0.8` (beyond `3√3 t2 = 0.5196`): `C = -7.1e-17`.
+- `d`-vector formula vs plaquette fluxes: max deviation 3.0e-2 (nk = 60), 7.8e-3 (nk = 120), 2.0e-3 (nk = 240), against a peak `|Ω|` of 4.26; it falls like `1/nk²`, and the signs agree.
+- Kubo formula (nk = 120, plaquette centres): `C = -1.0000000000`.
+- With the orbital positions included (atomic convention) the curvature map changes by up to 0.69 against a peak of 4.25, while `C = -1.0000000001`.
+<!-- END haldane -->
+
+<!-- BEGIN phase -->
+- Phase diagram on a 61 × 61 grid of `(φ, M/t2)` with nk = 24: of 3721 points, 3 sit exactly on a gap-closing line (C undefined, excluded) and **0 of the remaining 3718 disagree** with the analytic boundary.
+- With nk = 25 (K not on the grid): 16 of 3718 points disagree, all within `|ΔM| ≤ 5.7e-4` of the boundary.
+- With nk = 16 (K not on the grid): 40 of 3718 points disagree, all within `|ΔM| ≤ 8.3e-3` of the boundary.
+<!-- END phase -->
+
+`nk = 24` is divisible by 3, so `K` and `K′` are grid nodes, which makes the lattice Chern number
+unusually robust near the boundary. With other grids the disagreeing points lie next to the
+boundary, where the gap is smaller than the grid resolves; the JSON output reports their number.
 
 ![Haldane Berry curvature](docs/haldane_berry.png)
+
+The curvature map is drawn in the periodic gauge of the Bloch Hamiltonians (see
+[Conventions](#conventions)); with the orbital positions included it looks different, while the
+Chern number is the same.
+
 ![Haldane phase diagram](docs/haldane_phase.png)
 
 ### Kronig-Penney
 
 Units `ħ = m = 1`. The analytic Bloch condition `cos(kL) = f(E)` (both `E < V0` and `E > V0`
 branches, with a safe `E = V0` limit) is compared with a **separate** plane-wave diagonalisation
-(201 plane waves, Fourier coefficients of the square-barrier potential).
+(Fourier coefficients of the square-barrier potential).
 
-- `V0 = 20`, well 1, barrier 0.3: lowest four bands at `[2.390, 3.237]`, `[9.225, 12.883]`,
-  `[19.837, 28.755]`, `[34.116, 50.568]`; max |E_analytic − E_planewave| is
-  `4e-7, 1e-6, 2e-6, 2e-6` for the four bands (and decreases as the basis is enlarged: `--npw 25, 50, 100`, i.e. 51, 101 and 201
-  plane waves, give monotonically smaller errors, tested).
-- Free-particle limit `V0 → 0` recovers `E = k²/2`; thick barriers collapse the lowest band onto
-  the bound state of a *single* finite square well (band centre agrees to 5e-11 relative, found
-  from an independent transcendental equation).
+<!-- BEGIN kp -->
+- `V0 = 20`, well 1, barrier 0.3, 201 plane waves: lowest four bands `[2.390, 3.237]`, `[9.225, 12.883]`, `[19.837, 28.755]`, `[34.116, 50.568]`; max `|E_analytic - E_planewave|` per band 4.4e-7, 1.4e-6, 1.9e-6, 2.0e-6.
+- Largest error over the four bands against the number of plane waves: 1.4e-4 (51), 1.7e-5 (101), 2.0e-6 (201), 2.6e-7 (401). Each doubling of the basis divides it by 8.0, 8.4, 7.9, consistent with the `1/N³` expected for a step potential (the wave function's second derivative jumps at the steps).
+- Thick barriers (`V0 = 100`, barrier 0.8): the lowest band is 1.5e-5 of its energy wide and its centre agrees with the level of a single finite well to 5.2e-11 (relative).
+<!-- END kp -->
+
+- Free-particle limit `V0 → 0` recovers `E = k²/2`. The single-well level used above comes from
+  the transcendental equation `k tan(k w/2) = κ` of one finite well, independent of the
+  Kronig-Penney formula.
 
 ![Kronig-Penney](docs/kronig_penney.png)
 
@@ -201,27 +233,32 @@ branches, with a safe `E = V0` limit) is compared with a **separate** plane-wave
 Verbatim output of `tblab verify` (also in [`docs/verify.txt`](docs/verify.txt) and
 [`docs/verify.json`](docs/verify.json)):
 
+<!-- BEGIN verify -->
 ```text
-check                                                        analytic       numeric       error       tol  ok
--------------------------------------------------------------------------------------------------------------
-chain: max |E(k) + 2t cos k|                                        0             0    0.00e+00     1e-12  PASS (abs)
-square: bandwidth 8t                                              5.6           5.6    0.00e+00     1e-12  PASS (abs)
-graphene: Dirac velocity vs 3ta/2                               5.751         5.751    2.52e-09     1e-06  PASS (rel)
-graphene: gap at K                                                  0    2.1616e-15    2.16e-15     1e-12  PASS (abs)
-graphene: DOS(0.1t) vs 2√3|E|/(3πt²)                        0.0367553     0.0371197    9.92e-03     3e-02  PASS (rel)
-square: DOS(2t) vs K(m)/(2π²t)                                0.10925      0.109257    6.43e-05     2e-02  PASS (rel)
-SSH (v=.5,w=1, N=40): max |E_edge|                                  0   6.82188e-13    6.82e-13     1e-09  PASS (abs)
-SSH: edge decay ratio |v/w|                                       0.5           0.5    2.22e-14     1e-06  PASS (rel)
-SSH topological: |Zak phase|                                  3.14159       3.14159    4.44e-16     1e-09  PASS (abs)
-SSH trivial: |Zak phase|                                            0   3.34802e-16    3.35e-16     1e-09  PASS (abs)
-Haldane topological (M=0): |C|                                      1             1    0.00e+00     1e-06  PASS (abs)
-Haldane trivial (M=0.8, > 3√3 t2): C                                0   -7.0679e-17    7.07e-17     1e-06  PASS (abs)
-Haldane: gap at K,K' (M=0) = 2·3√3 t2 sinφ                    1.03923       1.03923    2.22e-16     1e-12  PASS (abs)
-Haldane: gap K' equals gap K at M=0                           1.03923       1.03923    4.44e-16     1e-12  PASS (abs)
-Kronig-Penney: max |E_analytic - E_planewave| (3 bands)             0    1.8909e-06    1.89e-06     1e-04  PASS (abs)
-graphene BZ area = (2π)²/A_cell                               15.1953       15.1953    3.51e-16     1e-10  PASS (rel)
-16/16 checks passed
+check                                                               analytic       numeric       error       tol  ok
+--------------------------------------------------------------------------------------------------------------------
+chain (t2 = 0.25): Bloch vs real space, 64 cells                           0   3.10862e-15    3.11e-15     1e-12  PASS (abs)
+square (t2 = 0.2): Bloch vs real space, 24x24 cells                        0   1.37668e-14    1.38e-14     1e-12  PASS (abs)
+SSH (v = 0.4, w = 1.1): Bloch vs real space, 64 cells                      0   2.66454e-15    2.66e-15     1e-12  PASS (abs)
+graphene (m = 0.3): Bloch vs real space, 12x12 cells                       0   9.10383e-15    9.10e-15     1e-12  PASS (abs)
+Haldane (phi = 0.7, M = 0.3): Bloch vs real space, 12x12 cells             0   1.62093e-14    1.62e-14     1e-12  PASS (abs)
+graphene: Dirac velocity vs 3ta/2                                      5.751         5.751    2.52e-09     1e-06  PASS (rel)
+graphene: gap at K                                                         0    2.1616e-15    2.16e-15     1e-12  PASS (abs)
+graphene: DOS(0.1t) vs 2√3|E|/(3πt²)                               0.0367553     0.0371197    9.92e-03     3e-02  PASS (rel)
+square: DOS(2t) vs K(m)/(2π²t)                                       0.10925      0.109257    6.43e-05     2e-02  PASS (rel)
+SSH (v=.5,w=1, N=40): |E_edge| vs w(v/w)^N(1-(v/w)²)             6.82121e-13   6.82121e-13    6.96e-13     1e-03  PASS (rel)
+SSH: edge decay ratio |v/w|                                              0.5           0.5    2.22e-14     1e-06  PASS (rel)
+SSH topological: |Zak phase|                                         3.14159       3.14159    4.44e-16     1e-09  PASS (abs)
+SSH trivial: |Zak phase|                                                   0   3.34802e-16    3.35e-16     1e-09  PASS (abs)
+Haldane topological (M=0): |C|                                             1             1    0.00e+00     1e-06  PASS (abs)
+Haldane trivial (M=0.8, > 3√3 t2): C                                       0   -7.0679e-17    7.07e-17     1e-06  PASS (abs)
+Haldane (M=0.3): gap at K = 2|M - 3√3 t2 sinφ|                       0.43923       0.43923    1.11e-16     1e-12  PASS (abs)
+Haldane (M=0.3): gap at Kp = 2|M + 3√3 t2 sinφ|                      1.63923       1.63923    4.44e-16     1e-12  PASS (abs)
+Kronig-Penney: max |E_analytic - E_planewave| (4 bands)                    0   2.04765e-06    2.05e-06     1e-04  PASS (abs)
+graphene BZ area = (2π)²/A_cell                                      15.1953       15.1953    3.51e-16     1e-10  PASS (rel)
+19/19 checks passed
 ```
+<!-- END verify -->
 
 (The graphene velocity row uses `t = 2.7`, `a = 1.42` only to exercise unit scaling; `t` and `a` are
 free parameters here, not fitted values.)
@@ -255,13 +292,24 @@ time and ran the suite against each; the mutations it did not catch are listed i
 mutations plus mutations of the code added in version 0.2 and writes the outcome to
 [`docs/mutation_check.json`](docs/mutation_check.json).
 
+<!-- BEGIN mutation -->
+The suite catches 37 of 37 mutations.
+<!-- END mutation -->
+
 ## Conventions
 
 - `ħ = 1`; `H = -t Σ c†c` so a positive `t` gives `E(k) = -2t cos ka` for the chain.
 - Graphene/Haldane `a` is the **C-C bond length** (lattice constant `√3 a`), which is why the Dirac
   velocity is `3ta/2`.
-- Bloch Hamiltonians use the *periodic gauge* (`H(k+G) = H(k)`), needed for Berry-phase code;
-  energies do not depend on the gauge.
+- Bloch Hamiltonians use the *periodic gauge* (`H(k+G) = H(k)`): the Bloch phase of a hop
+  depends only on the lattice vector between the cells, not on the positions of the orbitals inside
+  the cell. Energies do not depend on this choice, and neither does the Chern number. **The Berry
+  curvature map does.** Including the orbital positions (the "atomic" convention, B at
+  `τ = (a1 + a2)/3`, whose curvature is the one in semiclassical dynamics) adds `τ |u_B|²` to the
+  connection and `τ_y ∂x|u_B|² − τ_x ∂y|u_B|²` to `Ω(k)`; that term integrates to zero over the zone
+  because `|u_B|²` is periodic. The plotted map is the periodic-gauge one;
+  `berry_curvature_kubo(..., orbital_positions=...)` gives the other, and a test checks the
+  formula for the difference.
 - Berry connection `A = i⟨u|∇u⟩`, curvature `Ω = ∂x Ay − ∂y Ax`, `C = (1/2π)∫Ω d²k`. With the
   next-nearest-neighbour chirality ν defined as +1 for a left turn, this code gives `C = -sign(t2 sin φ)`
   in the topological phase. The sign depends on conventions; the magnitude and the phase boundary do not.
@@ -292,7 +340,11 @@ src/tblab/
   verify.py          `tblab verify` table
   plotting.py        matplotlib figures (OO API, headless-safe)
   cli.py             `tblab` command
-tests/               pytest suite
+tests/               pytest suite (test_readme_sync.py: README numbers equal docs/*.json)
+tools/
+  measure.py         README numbers that no command writes -> docs/measurements.json
+  fill_readme.py     writes the generated blocks of this README from docs/*.json
+  mutation_check.py  deliberate bugs, one at a time -> docs/mutation_check.json
 docs/                figures, JSON and verify table generated by scripts/make_docs.sh
 .github/workflows/ci.yml
 ```
@@ -300,20 +352,23 @@ docs/                figures, JSON and verify table generated by scripts/make_do
 ## Reproducing the figures
 
 ```bash
-pip install -e .
-bash scripts/make_docs.sh      # regenerates everything under docs/ (about 20 s)
+pip install -e ".[dev]"
+bash scripts/make_docs.sh           # figures and JSON in docs/, then measure.py and fill_readme.py
+python tools/mutation_check.py      # optional, a few minutes: docs/mutation_check.json
+python tools/fill_readme.py         # after the mutation check, to update its block
 ```
 
 ## Limitations (please read)
 
 - **This is a teaching implementation, not a replacement for Wannier90 or any production
   electronic-structure code.** There is no first-principles input, no Wannier interpolation, no
-  spin, spin-orbit coupling, interactions or self-consistency. The models are hand-written with free hopping
-  parameters; nothing is fitted to a real material, and the numbers (`t`, `a`) used in examples
-  are not claims about graphene.
+  spin, spin-orbit coupling, interactions or self-consistency. The models are hand-written with
+  free hopping parameters; nothing is fitted to a real material, and the numbers (`t`, `a`) used
+  in examples are not claims about graphene.
 - DOS: only 1D (segments) and 2D (triangles) linear interpolation; no 3D tetrahedra, no symmetry
-  reduction, no Blöchl corrections. The graphene low-energy DOS comparison deviates by up to 4 %
-  at `0.3 t` because the true model is not exactly linear there.
+  reduction, no Blöchl corrections. The graphene low-energy comparison in the table measures how
+  far nearest-neighbour graphene is from the linear law, not only the numerical error. One fixed
+  diagonal per grid cell breaks the lattice symmetry slightly.
 - Chern numbers use the single-band FHS method; it needs a gapped band and a grid that resolves the
   curvature. `chern_number` raises `GapClosedError` when the band touches a neighbour on the grid.
   A touching *between* grid points (graphene's Dirac points when `nk` is not a multiple of 3)
@@ -323,12 +378,22 @@ bash scripts/make_docs.sh      # regenerates everything under docs/ (about 20 s)
   `--mass 0` is refused for this reason. There is no multi-band (non-Abelian) or Wilson-loop flow
   implementation.
 - Kronig-Penney band edges are found by scanning the energy axis. Bands narrower than about the
-  scan step are caught via local minima of `|f|`, but bandwidths below double-precision resolution
-  (e.g. `1e-10` for very thick barriers) are not resolved. The plane-wave solver converges only
+  scan step are caught via local minima of `|f|`, but bandwidths below double-precision
+  resolution (relative to the band energy, reached for very thick barriers) are not resolved. The plane-wave solver converges only
   algebraically for a discontinuous potential.
-- No performance benchmarks are claimed. Large DOS grids (e.g. `--nk 300` for graphene) take
-  seconds to tens of seconds in pure NumPy.
+- No performance benchmarks are claimed; large DOS grids are slow in pure NumPy.
 - The plots are static PNGs; there is no interactive viewer.
+
+## References
+
+- F. D. M. Haldane, Model for a quantum Hall effect without Landau levels: condensed-matter
+  realization of the "parity anomaly", Phys. Rev. Lett. 61, 2015 (1988).
+- T. Fukui, Y. Hatsugai and H. Suzuki, Chern numbers in discretized Brillouin zone: efficient
+  method of computing (spin) Hall conductances, J. Phys. Soc. Jpn. 74, 1674 (2005).
+- W. P. Su, J. R. Schrieffer and A. J. Heeger, Phys. Rev. Lett. 42, 1698 (1979).
+- J. Zak, Berry's phase for energy bands in solids, Phys. Rev. Lett. 62, 2747 (1989).
+- A. H. Castro Neto, F. Guinea, N. M. R. Peres, K. S. Novoselov and A. K. Geim, The electronic
+  properties of graphene, Rev. Mod. Phys. 81, 109 (2009).
 
 ## Licence
 

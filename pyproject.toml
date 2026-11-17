@@ -56,6 +56,9 @@ ignore = [
     "RUF003",
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tools/fill_readme.py" = ["E501"]  # markdown lines
+
 [tool.mypy]
 python_version = "3.10"
 ignore_missing_imports = true

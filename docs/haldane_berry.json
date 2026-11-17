@@ -14,7 +14,11 @@
     "chern_number_raw_sum": -1.0,
     "min_direct_gap_on_grid": 1.041337361794276,
     "nk": 100,
+    "check_nk": 201,
+    "check_chern_number_raw_sum": -1.0,
+    "check_min_direct_gap_on_grid": 1.0396159221704915,
     "sign_convention": "A = i<u|grad u>, Omega = dAy/dx - dAx/dy, C = (1/2pi) integral Omega",
+    "gauge": "periodic (orbital positions inside the cell ignored): the curvature map depends on this choice, the Chern number does not",
     "critical_mass_3sqrt3_t2_sin_phi": 0.5196152422706632,
     "analytic_prediction": -1,
     "analytic_valley_gaps": [

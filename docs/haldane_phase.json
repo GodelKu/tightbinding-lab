@@ -13,10 +13,10 @@
     ],
     "nk_per_direction": 24,
     "points_total": 3721,
-    "points_excluded_gap_exactly_closed": 3,
+    "points_excluded_gap_closed": 3,
     "points_disagreeing_with_analytic": 0,
     "max_distance_to_boundary_of_disagreeing_point_in_M": 0.0,
-    "note": "C is undefined where the gap closes exactly (excluded). nk divisible by 3 puts K and K' on the k-grid, which makes the lattice Chern number unusually robust near the boundary."
+    "note": "C is undefined where the gap closes (excluded). nk divisible by 3 puts K and K' on the k-grid, which makes the lattice Chern number unusually robust near the boundary."
   },
   "phi": [
     -3.141592653589793,

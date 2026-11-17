@@ -24,6 +24,10 @@
     "band_min": -1.5,
     "band_max": 1.5,
     "max_abs_error_vs_analytic": 4.440892098500626e-16,
+    "real_space_check": {
+      "cells_per_direction": 64,
+      "max_abs_difference": 2.4424906541753444e-15
+    },
     "direct_gap_numeric": 1.0,
     "direct_gap_analytic_2|v-w|": 1.0
   },

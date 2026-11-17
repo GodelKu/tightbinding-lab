@@ -28,6 +28,10 @@
     "band_min": -3.0,
     "band_max": 3.0,
     "max_abs_error_vs_analytic": 1.0130785099704553e-15,
+    "real_space_check": {
+      "cells_per_direction": 12,
+      "max_abs_difference": 9.325873406851315e-15
+    },
     "direct_gap_at_special_points": {
       "G": 6.0,
       "K": 1.3506446028928517e-15,
@@ -36,12 +40,12 @@
     },
     "dirac_points_found_fractional": [
       [
-        0.3333333333333333,
-        0.6666666666666666
+        0.3333333333333334,
+        0.6666666666666677
       ],
       [
-        0.6666666666666666,
-        0.3333333333333333
+        0.6666666666666698,
+        0.3333333333333363
       ]
     ],
     "fermi_velocity_numeric": 1.4999999981248269,

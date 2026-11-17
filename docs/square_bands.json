@@ -28,7 +28,11 @@
     ],
     "band_min": -4.0,
     "band_max": 4.0,
-    "max_abs_error_vs_analytic": 0.0
+    "max_abs_error_vs_analytic": null,
+    "real_space_check": {
+      "cells_per_direction": 24,
+      "max_abs_difference": 1.687538997430238e-14
+    }
   },
   "k_distance": [
     0.0,
