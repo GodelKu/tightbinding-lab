@@ -26,7 +26,14 @@ from .models import MODELS, SSH, BlochModel, Chain, Graphene, Haldane, Square, m
 from .plotting import fig_bands, fig_berry, fig_dos, fig_kp, fig_phase, fig_ssh
 from .realspace import DEFAULT_CELLS, max_band_difference
 from .ssh import ssh_edge_modes, ssh_spectrum_sweep
-from .topology import chern_number, ssh_winding_number, zak_phase
+from .topology import (
+    GAP_TOL,
+    GapClosedError,
+    chern_number,
+    converged_chern_number,
+    ssh_winding_number,
+    zak_phase,
+)
 from .verify import format_table, run_checks
 
 # ---------------------------------------------------------------------------------------------
@@ -261,12 +268,29 @@ def cmd_ssh(args: argparse.Namespace) -> int:
     return 0
 
 
+def _analytic_valley_gaps(model: BlochModel) -> tuple[float, float] | None:
+    """Direct gaps at K and K' from the closed forms, for the models that have them."""
+    if isinstance(model, Haldane):
+        return an.haldane_dirac_gaps(model)
+    if isinstance(model, Graphene):
+        return 2.0 * abs(model.mass), 2.0 * abs(model.mass)
+    return None
+
+
 def cmd_berry(args: argparse.Namespace) -> int:
     model = _model_from_args(args)
     if model.dim != 2 or model.norb != 2:
         print("berry: choose a 2D two-band model (haldane or graphene)", file=sys.stderr)
         return 2
-    res = chern_number(model, band=0, nk=args.nk, origin=(-0.5, -0.5))
+    gaps = _analytic_valley_gaps(model)
+    if gaps is not None and min(gaps) < GAP_TOL:
+        hint = "--mass" if isinstance(model, Graphene) else "--mass, --t2 or --phi"
+        raise GapClosedError(
+            f"{model.name} with these parameters is gapless at K or K' (analytic valley gaps "
+            f"{gaps[0]:.3g}, {gaps[1]:.3g}): the Berry curvature and Chern number of the lower "
+            f"band are undefined; change {hint} to open the gap"
+        )
+    res, check = converged_chern_number(model, band=0, nk=args.nk, origin=(-0.5, -0.5))
     p = model.params()
     title = f"Berry curvature of the lower band, C = {res.chern_int:+d}"
     results: dict[str, Any] = {
@@ -274,6 +298,9 @@ def cmd_berry(args: argparse.Namespace) -> int:
         "chern_number_raw_sum": res.chern,
         "min_direct_gap_on_grid": res.min_gap,
         "nk": args.nk,
+        "check_nk": 2 * args.nk + 1,
+        "check_chern_number_raw_sum": check.chern,
+        "check_min_direct_gap_on_grid": check.min_gap,
         "sign_convention": "A = i<u|grad u>, Omega = dAy/dx - dAx/dy, C = (1/2pi) integral Omega",
     }
     if isinstance(model, Haldane):
@@ -302,7 +329,12 @@ def cmd_phase(args: argparse.Namespace) -> int:
                 chern[i, j] = np.nan
                 excluded += 1
                 continue
-            c = chern_number(h, nk=args.nk).chern_int
+            try:
+                c = chern_number(h, nk=args.nk).chern_int
+            except GapClosedError:  # gap closes on the k-grid itself
+                chern[i, j] = np.nan
+                excluded += 1
+                continue
             chern[i, j] = c
             pred = an.haldane_chern_expected(h.mass, t2, float(phi))
             if c != pred:
@@ -314,11 +346,11 @@ def cmd_phase(args: argparse.Namespace) -> int:
         "grid": [args.n, args.n],
         "nk_per_direction": args.nk,
         "points_total": args.n * args.n,
-        "points_excluded_gap_exactly_closed": excluded,
+        "points_excluded_gap_closed": excluded,
         "points_disagreeing_with_analytic": bad,
         "max_distance_to_boundary_of_disagreeing_point_in_M": worst_margin,
         "note": (
-            "C is undefined where the gap closes exactly (excluded). nk divisible by 3 puts "
+            "C is undefined where the gap closes (excluded). nk divisible by 3 puts "
             "K and K' on the k-grid, which makes the lattice Chern number unusually robust "
             "near the boundary."
         ),

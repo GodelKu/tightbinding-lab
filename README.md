@@ -158,6 +158,7 @@ Honeycomb lattice with `-t1` nearest-neighbour hopping, `t2 e^{iνφ}` next-near
 number is computed with the Fukui-Hatsugai-Suzuki link-variable method on an `nk × nk` grid, and
 the Berry curvature is the plaquette flux per unit area.
 
+- A Chern number is only computed for a gapped band (see Limitations).
 - `t2 = 0.1, φ = π/2, M = 0`: `C = -1` (the raw plaquette sum is -1.0 to machine precision, no rounding
   needed). In the tests the integer is unchanged for 25 to 50 points per direction and shifted grid origins.
 - `M = 0.8` (beyond `3√3 t2 = 0.5196`): `C = 0` to 1e-16.
@@ -238,6 +239,7 @@ ruff check .
 | `test_graphene.py` | bands vs `±\|f(k)\|`; particle-hole symmetry; `E(Γ) = ±3t`, `E(M) = ±t`; gap 0 at K/K'; Dirac velocity `3ta/2` for 3 parameter sets × 2 valleys × 5 directions; `dq²` convergence; slope fit along K→Γ; numerically located Dirac points; gap `2m` with a sublattice mass |
 | `test_ssh.py` | bulk `±\|v + w e^{-ik}\|`, gap `2\|v-w\|`; chiral symmetry of the open chain; two zero modes iff `w > v` with `\|E\| ≲ w (v/w)^N`; analytic zero mode `(-v/w)^n` inside the numerical zero-mode subspace; fitted decay ratio; sublattice/edge localisation; Zak phase 0/π, winding number, gauge invariance |
 | `test_haldane.py` | Hermiticity and exact periodicity `H(k+G) = H(k)`; reduces to graphene at `t2 = 0`; closed-form bands; valley gaps `2\|M ∓ 3√3 t2 sin φ\|`; `C = ±1` / `0`; sign under `φ → -φ`; independence of grid size and origin; gauge invariance of the plaquette product; FHS curvature vs the `d`-vector formula; scan over `(φ, M)` against the analytic boundary |
+| `test_chern_guard.py` | gapless graphene is refused on and between grid nodes; a too coarse grid near the transition is refused; the CLI refuses gapless parameters |
 | `test_dos.py` | exact normalisation; chain cumulative DOS; square DOS vs elliptic integral; graphene linear DOS, particle-hole symmetry and van Hove peak; Gaussian vs tetrahedron; SSH gap |
 | `test_kronig_penney.py` | free limit; `E = V0` continuity and closed form; transcription of both branches; plane-wave eigenvalues satisfy the analytic condition; convergence with basis size; band edges at `\|f\| = 1`; isolated-well limit; bandwidth vs barrier width |
 | `test_kpath.py` | path parsing, segment lengths from hand-derived geometry, BZ area `(2π)²/A`, K/M positions |
@@ -304,7 +306,13 @@ bash scripts/make_docs.sh      # regenerates everything under docs/ (about 20 s)
   reduction, no Blöchl corrections. The graphene low-energy DOS comparison deviates by up to 4 %
   at `0.3 t` because the true model is not exactly linear there.
 - Chern numbers use the single-band FHS method; it needs a gapped band and a grid that resolves the
-  curvature. There is no multi-band (non-Abelian) or Wilson-loop flow implementation.
+  curvature. `chern_number` raises `GapClosedError` when the band touches a neighbour on the grid.
+  A touching *between* grid points (graphene's Dirac points when `nk` is not a multiple of 3)
+  leaves a finite gap on the grid and would still give an integer; `converged_chern_number`,
+  which `tblab berry` uses, repeats the calculation on a `2nk+1` grid and refuses when the
+  smallest gap shrinks under refinement or the two integers differ. `tblab berry graphene` with
+  `--mass 0` is refused for this reason. There is no multi-band (non-Abelian) or Wilson-loop flow
+  implementation.
 - Kronig-Penney band edges are found by scanning the energy axis. Bands narrower than about the
   scan step are caught via local minima of `|f|`, but bandwidths below double-precision resolution
   (e.g. `1e-10` for very thick barriers) are not resolved. The plane-wave solver converges only

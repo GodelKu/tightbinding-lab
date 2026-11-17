@@ -45,14 +45,27 @@ def ssh_winding_number(v: float, w: float, nk: int = 2001) -> int:
     return round(float(dphi.sum()) / (2.0 * math.pi))
 
 
+#: default threshold (energy units) below which a direct gap counts as closed
+GAP_TOL = 1e-6
+
+
+class GapClosedError(ValueError):
+    """The band is not separated from its neighbours on the k-grid: no Chern number exists."""
+
+
 @dataclass(frozen=True)
 class BerryResult:
-    """Result of a Fukui-Hatsugai-Suzuki calculation on an ``nk × nk`` grid."""
+    """Result of a Fukui-Hatsugai-Suzuki calculation on an ``nk × nk`` grid.
+
+    ``curvature`` is the plaquette flux per unit area in the periodic gauge of
+    :mod:`tblab.models` (orbital positions inside the cell ignored). The map depends on that
+    choice; its integral ``chern`` does not.
+    """
 
     chern: float  # unrounded Σ flux / 2π
     curvature: FloatArray  # (nk, nk) Berry curvature density Ω_z(k) (area-normalised)
     kfrac: FloatArray  # (nk, nk, 2) fractional grid positions
-    min_gap: float  # smallest direct gap (band, band+1) on the grid
+    min_gap: float  # smallest direct gap between the band and its neighbours on the grid
 
     @property
     def chern_int(self) -> int:
@@ -60,7 +73,11 @@ class BerryResult:
 
 
 def chern_number(
-    model: BlochModel, band: int = 0, nk: int = 60, origin: tuple[float, float] = (0.0, 0.0)
+    model: BlochModel,
+    band: int = 0,
+    nk: int = 60,
+    origin: tuple[float, float] = (0.0, 0.0),
+    gap_tol: float = GAP_TOL,
 ) -> BerryResult:
     """Chern number of ``band`` by the Fukui-Hatsugai-Suzuki lattice method.
 
@@ -69,9 +86,19 @@ def chern_number(
     the product of the four link variables around it, which lies in (-π, π]; the sum is an integer
     as soon as the grid resolves the curvature. ``origin`` shifts the fractional grid (the result
     must not depend on it).
+
+    A Chern number exists only for a band separated by a gap from the bands above and below.
+    :class:`GapClosedError` is raised when the smallest direct gap on the grid is below
+    ``gap_tol``. A band touching *between* grid points (e.g. graphene's Dirac points when ``nk``
+    is not divisible by 3) leaves a finite gap on the grid and is not detected here; use
+    :func:`converged_chern_number` for that.
     """
     if model.dim != 2:
         raise ValueError("chern_number needs a 2D model")
+    if nk < 2:
+        raise ValueError(f"nk must be at least 2, got {nk}")
+    if not 0 <= band < model.norb:
+        raise ValueError(f"band must be in 0..{model.norb - 1}, got {band}")
     f = np.arange(nk) / nk
     kf = np.stack(np.meshgrid(f + origin[0], f + origin[1], indexing="ij"), axis=-1)
     w, vec = model.eigh(kf)
@@ -87,13 +114,56 @@ def chern_number(
     det_b = float(np.linalg.det(model.reciprocal))
     flux = -np.angle(loop) * np.sign(det_b)
     area = abs(det_b) / (nk * nk)
-    gap = w[..., band + 1] - w[..., band] if band + 1 < w.shape[-1] else np.array([np.inf])
+    min_gap = math.inf
+    if band + 1 < w.shape[-1]:
+        min_gap = min(min_gap, float((w[..., band + 1] - w[..., band]).min()))
+    if band > 0:
+        min_gap = min(min_gap, float((w[..., band] - w[..., band - 1]).min()))
+    if min_gap < gap_tol:
+        raise GapClosedError(
+            f"band {band} touches a neighbouring band on the {nk}x{nk} grid (smallest direct gap "
+            f"{min_gap:.2e} < {gap_tol:g}): the Chern number is undefined"
+        )
     return BerryResult(
         chern=float(flux.sum() / (2.0 * math.pi)),
         curvature=np.asarray(flux / area, dtype=float),
         kfrac=kf,
-        min_gap=float(gap.min()),
+        min_gap=min_gap,
     )
+
+
+def converged_chern_number(
+    model: BlochModel,
+    band: int = 0,
+    nk: int = 60,
+    origin: tuple[float, float] = (0.0, 0.0),
+    gap_tol: float = GAP_TOL,
+    shrink: float = 0.75,
+) -> tuple[BerryResult, BerryResult]:
+    """Chern number on ``nk`` and on the finer grid ``2 nk + 1``, with two consistency checks.
+
+    * If the smallest gap on the finer grid is below ``shrink`` times the one on the coarser grid,
+      the gap is not resolved: the bands touch between grid points (a gapless band) or the grid is
+      too coarse for a small gap. :class:`GapClosedError` is raised. For a resolved gap the
+      minimum hardly moves under refinement, for a band touching it falls roughly like ``1/nk``.
+    * If both grids pass but give different integers, ``ValueError`` is raised.
+
+    Returns ``(coarse, fine)``.
+    """
+    coarse = chern_number(model, band, nk, origin, gap_tol)
+    fine = chern_number(model, band, 2 * nk + 1, origin, gap_tol)
+    if fine.min_gap < shrink * coarse.min_gap:
+        raise GapClosedError(
+            f"the smallest direct gap falls from {coarse.min_gap:.3g} (nk={nk}) to "
+            f"{fine.min_gap:.3g} (nk={2 * nk + 1}): the gap is not resolved by the grid, either "
+            "because the bands touch between grid points or because nk is too small"
+        )
+    if coarse.chern_int != fine.chern_int:
+        raise ValueError(
+            f"Chern number not converged: {coarse.chern:+.4f} at nk={nk}, {fine.chern:+.4f} at "
+            f"nk={2 * nk + 1}; increase nk"
+        )
+    return coarse, fine
 
 
 def berry_curvature_two_band(model: BlochModel, kfrac: FloatArray, h: float = 1e-5) -> FloatArray:
