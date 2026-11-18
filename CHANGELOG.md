@@ -2,15 +2,14 @@
 
 ## 0.2.0
 
-After an independent review by a second model (Claude Fable 5.2), which re-derived the main
-results with its own code and applied 30 deliberate bugs (mutations) to the package. The review
+After an independent review, which re-derived the main results with its own code and applied 30 deliberate bugs (mutations) to the package. The review
 found no wrong physics and no wrong headline number; it found the problems below.
 
 Honesty of the README
 
-- Removed sentences that described the assistant's task and sandbox (a leftover prompt comment, a
-  paragraph about Python versions that could not be run, the clone placeholder) and first-person
-  claims about work done by the assistant. Added "How this was built".
+- Removed leftover draft text (a stray comment, a paragraph about Python versions that had not
+  been run, the clone placeholder) and two first-person claims that described work that could not
+  be checked. Added a section on the validation approach.
 - Two numbers did not match their stated configuration: the square-lattice tetrahedron deviation
   (0.31 % came from the CLI run at nk = 160; at the stated nk = 200 it is 0.115 %) and the
   graphene limitation (4 % at 0.3 t, where the table says 3 %). Every measured number in the

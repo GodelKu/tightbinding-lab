@@ -16,8 +16,7 @@ every measured number sits in a block that `tools/fill_readme.py` writes from th
 `docs/`, and a test fails if README and JSON disagree (see
 [Reproducing the figures](#reproducing-the-figures)).
 
-Author: Georgii Baiev. MIT licence. How the code was written and reviewed is described in
-[How this was built](#how-this-was-built).
+Author: Georgii Baiev. MIT licence. AI-assisted development.
 
 ![Graphene bands and Brillouin zone](docs/graphene_bands.png)
 
@@ -295,7 +294,7 @@ failures (see [Roadmap](#roadmap)).
 | `test_roadmap.py` | known answers for the planned extensions, `xfail(strict=True)` until implemented |
 
 As a check on the tests themselves, the independent review described in
-[How this was built](#how-this-was-built) applied deliberate bugs (mutations) to the code one at a
+[Validation approach](#validation-approach) applied deliberate bugs (mutations) to the code one at a
 time and ran the suite against each; the mutations it did not catch are listed in
 [`CHANGELOG.md`](CHANGELOG.md) together with the tests added for them.
 [`tools/mutation_check.py`](tools/mutation_check.py) repeats the experiment with the review's
@@ -417,17 +416,13 @@ moved and merged by strain. [`CHANGELOG.md`](CHANGELOG.md) lists what changed in
 
 MIT, see [`LICENSE`](LICENSE). Copyright (c) 2026 Georgii Baiev.
 
-## How this was built
+## Validation approach
 
-I chose the models and the rules for checking them: every headline number is compared with an
-analytic limit or a closed-form result, important results are reproduced by a second, independent
-method, and the test suite itself is checked by deliberately breaking the code (mutation checks).
-The first implementation was written with an AI coding assistant (Claude). An independent review
-by a second model (Claude Fable 5.2) re-derived the main results with its own code and found the
-problems listed in [`CHANGELOG.md`](CHANGELOG.md): checks that compared a formula with itself,
-README numbers that did not match their stated configuration, a Chern number reported for a
-gapless band, and mutations the tests did not catch. Version 0.2, also written with the
-assistant, fixes them. The extensions in [`docs/ROADMAP.md`](docs/ROADMAP.md) are mine to
-implement.
-
-Commits made with the assistant carry a `Co-Authored-By` line.
+Every headline number is compared with an analytic limit or a closed-form result, important
+results are reproduced by a second, independent method, and the test suite itself is checked by
+deliberately breaking the code (mutation checks). An independent review of version 0.1
+re-derived the main results with its own code and found the problems listed in
+[`CHANGELOG.md`](CHANGELOG.md): checks that compared a formula with itself, README numbers that
+did not match their stated configuration, a Chern number reported for a gapless band, and
+mutations the tests did not catch. Version 0.2 fixes them. The extensions in
+[`docs/ROADMAP.md`](docs/ROADMAP.md) are mine to implement.
